@@ -207,6 +207,43 @@
     ctx.drawImage(handFrames[f], 0, 0);
   };
 
+
+  // red danger vignette (chases)
+  let vigR = null;
+  G.vignetteRed = function (ctx) {
+    if (!vigR) {
+      const px = new G.PX(W, H);
+      for (let y = 0; y < H; y++)
+        for (let x = 0; x < W; x++) {
+          const dx = (x - W / 2) / (W / 2), dy = (y - H / 2) / (H / 2);
+          const d = Math.sqrt(dx * dx * 0.85 + dy * dy);
+          const a = G.clamp((d - 0.55) / 0.6, 0, 1);
+          const lv = Math.floor(a * 4 + G.bayer(x, y) * 0.999) / 4;
+          if (lv > 0) px.d[y * W + x] = G.pack(140, 0, 16, Math.round(lv * 255));
+        }
+      vigR = px.canvas();
+    }
+    ctx.drawImage(vigR, 0, 0);
+  };
+  // film grain: a few precomputed noise frames
+  const grains = [];
+  G.grain = function (ctx, t, strength) {
+    if (!grains.length) {
+      for (let f = 0; f < 4; f++) {
+        const px = new G.PX(W, H);
+        const r = G.rng(900 + f);
+        for (let i = 0; i < W * H * 0.06; i++) {
+          const k = r.int(W * H);
+          px.d[k] = r() < 0.5 ? G.pack(255, 255, 255, 14) : G.pack(0, 0, 0, 22);
+        }
+        grains.push(px.canvas());
+      }
+    }
+    ctx.globalAlpha = strength === undefined ? 1 : strength;
+    ctx.drawImage(grains[Math.floor(t * 12) % 4], 0, 0);
+    ctx.globalAlpha = 1;
+  };
+
   // desaturate the whole screen (used while dying)
   G.desaturate = function (ctx, amt) {
     if (amt <= 0) return;

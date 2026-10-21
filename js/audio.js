@@ -33,6 +33,7 @@
     }
     A.ready = true;
     if (A._pendingSong) { const s = A._pendingSong; A._pendingSong = null; A.music(s); }
+    if (A._pendingAmb) { const s = A._pendingAmb; A._pendingAmb = null; A.ambience(s); }
   };
   A.toggleMute = function () {
     A.muted = !A.muted;
@@ -186,6 +187,81 @@
     whoosh() { const t = now(); noise(t, 0.35, 0.3, 'bandpass', 800, { slide: 200, q: 0.7, attack: 0.1 }); },
     gasp() { const t = now(); noise(t, 0.3, 0.1, 'bandpass', 1500, { q: 2, attack: 0.12 }); },
   };
+  // ---- horror adventure sounds ----
+  Object.assign(S, {
+    item() { const t = now(); [880, 1175, 1568].forEach((f, i) => osc('triangle', f, t + i * 0.07, 0.25, 0.07)); },
+    door() { const t = now(); noise(t, 0.18, 0.18, 'lowpass', 900); osc('sawtooth', 180, t + 0.02, 0.35, 0.03, { slide: 120, filter: ['lowpass', 600] }); noise(t + 0.3, 0.08, 0.2, 'lowpass', 400); },
+    locked() { const t = now(); for (let i = 0; i < 2; i++) { noise(t + i * 0.12, 0.05, 0.25, 'bandpass', 1500, { q: 3 }); osc('square', 220, t + i * 0.12, 0.04, 0.04); } },
+    unlock() { const t = now(); noise(t, 0.04, 0.3, 'bandpass', 2500, { q: 4 }); osc('triangle', 1200, t + 0.06, 0.12, 0.06, { slide: 800 }); },
+    stairs() { const t = now(); for (let i = 0; i < 4; i++) { noise(t + i * 0.12, 0.06, 0.12, 'lowpass', 500); osc('sine', 110, t + i * 0.12, 0.06, 0.08, { slide: 70 }); } },
+    step(kind) {
+      const t = now();
+      if (kind === 'stone') noise(t, 0.04, 0.05, 'bandpass', 1600, { q: 2 });
+      else if (kind === 'carpet') noise(t, 0.05, 0.025, 'lowpass', 500);
+      else { noise(t, 0.05, 0.05, 'bandpass', 700, { q: 2 }); if (Math.random() < 0.08) osc('sawtooth', 140 + Math.random() * 60, t, 0.18, 0.012, { filter: ['lowpass', 500] }); }
+    },
+    closet() { const t = now(); osc('sawtooth', 260, t, 0.3, 0.025, { slide: 150, filter: ['lowpass', 700] }); noise(t + 0.25, 0.06, 0.15, 'lowpass', 500); },
+    push() { const t = now(); noise(t, 0.35, 0.12, 'lowpass', 300, { attack: 0.05 }); },
+    bump() { const t = now(); osc('sine', 90, t, 0.08, 0.15, { slide: 60 }); },
+    thud(v) { const t = now(); osc('sine', 70, t, 0.12, 0.3 * (v || 1), { slide: 40 }); noise(t, 0.06, 0.12 * (v || 1), 'lowpass', 300); },
+    sting() { const t = now(); for (const f of [196, 207.7, 293.7, 311.1]) osc('sawtooth', f, t, 1.4, 0.05, { filter: ['lowpass', 2400], attack: 0.01, release: 1.2 }); noise(t, 0.6, 0.15, 'highpass', 3000); },
+    steps_away() { const t = now(); for (let i = 0; i < 5; i++) osc('sine', 70, t + i * 0.35, 0.1, 0.2 * (1 - i / 5), { slide: 45 }); },
+    scare() {
+      const t = now();
+      noise(t, 1.0, 0.7, 'bandpass', 1800, { q: 0.6 });
+      for (const f of [233, 247, 370, 392, 523, 554]) osc('sawtooth', f, t, 1.0, 0.07, { vib: [18, 25], filter: ['lowpass', 3500], attack: 0.005 });
+      osc('sine', 60, t, 0.8, 0.5, { slide: 30 });
+    },
+    death() { const t = now(); for (const f of [110, 116.5, 155.6]) osc('sawtooth', f, t, 2.5, 0.06, { filter: ['lowpass', 700], attack: 0.3, release: 2 }); },
+    cursor() { const t = now(); osc('square', 880, t, 0.025, 0.025); },
+    cancel() { const t = now(); osc('square', 440, t, 0.04, 0.03, { slide: 330 }); },
+    menu() { const t = now(); osc('triangle', 660, t, 0.06, 0.05); osc('triangle', 880, t + 0.05, 0.08, 0.05); },
+    paper() { const t = now(); noise(t, 0.18, 0.08, 'highpass', 2500, { attack: 0.03 }); },
+    dial() { const t = now(); noise(t, 0.02, 0.12, 'bandpass', 3000, { q: 5 }); },
+    slide() { const t = now(); noise(t, 0.1, 0.1, 'bandpass', 900, { q: 1 }); },
+    solve() { const t = now(); [523, 659, 784, 1047].forEach((f, i) => osc('triangle', f, t + i * 0.09, 0.4, 0.06)); },
+    tick() { const t = now(); osc('square', 2000, t, 0.015, 0.03); },
+    save() { const t = now(); [659, 784, 988, 1319].forEach((f, i) => osc('sine', f, t + i * 0.12, 0.6, 0.05)); },
+    glass() { const t = now(); noise(t, 0.4, 0.4, 'highpass', 3000); for (let i = 0; i < 8; i++) osc('sine', 2000 + Math.random() * 3000, t + Math.random() * 0.2, 0.2, 0.03); },
+    knock() { const t = now(); for (let i = 0; i < 3; i++) { osc('sine', 120, t + i * 0.22, 0.08, 0.35, { slide: 80 }); noise(t + i * 0.22, 0.05, 0.2, 'lowpass', 800); } },
+    whisper() { const t = now(); noise(t, 1.2, 0.08, 'bandpass', 2400, { q: 4, attack: 0.3 }); noise(t + 0.2, 0.9, 0.05, 'bandpass', 3400, { q: 5, attack: 0.2 }); },
+    laugh() { const t = now(); for (let i = 0; i < 5; i++) osc('triangle', 600 - i * 30, t + i * 0.13, 0.1, 0.05, { vib: [30, 20] }); },
+    drip() { const t = now(); osc('sine', 1400, t, 0.08, 0.06, { slide: 700 }); },
+    clock() { const t = now(); osc('square', 1800, t, 0.02, 0.03); osc('square', 1500, t + 0.5, 0.02, 0.03); },
+    bell() { const t = now(); for (const f of [392, 784, 1176]) osc('sine', f, t, 2.5, 0.08 / (f / 392), { release: 2.4 }); },
+    crash() { const t = now(); noise(t, 1.2, 0.6, 'lowpass', 3000, { slide: 200 }); osc('sine', 60, t, 0.6, 0.5, { slide: 25 }); },
+    heartbeat(v) { const t = now(); v = v || 0.5; osc('sine', 62, t, 0.16, v, { slide: 38 }); osc('sine', 58, t + 0.2, 0.2, v * 0.8, { slide: 34 }); },
+    blip(pitch, wave) { const t = now(); osc(wave || 0.25, pitch || 520, t, 0.035, 0.035, { release: 0.03 }); },
+    select() { const t = now(); osc(0.5, 660, t, 0.05, 0.06); osc(0.5, 990, t + 0.04, 0.07, 0.05); },
+    rbd() { S.sting(); },
+  });
+  A.note = function (freq, kind) {
+    if (!A.ready || A.muted) return;
+    const t = now();
+    if (kind === 'detuned') { osc('triangle', freq * 1.03, t, 1.2, 0.08, { release: 1.1 }); osc('sine', freq * 0.97, t, 1.2, 0.06, { release: 1.1 }); }
+    else { osc('triangle', freq, t, 1.4, 0.1, { release: 1.3 }); osc('sine', freq * 2, t, 0.8, 0.03, { release: 0.7 }); }
+  };
+  // ---- ambience: long looping noise drones ----
+  let amb = null;
+  A.ambience = function (name) {
+    if (!A.ready) { A._pendingAmb = name; return; }
+    if (amb && amb.name === name) return;
+    if (amb) { const g = amb.g; g.gain.setTargetAtTime(0, A.ctx.currentTime, 0.4); const nodes = amb.nodes; setTimeout(() => nodes.forEach((n) => { try { n.stop(); } catch (e) { /* stopped */ } }), 2500); amb = null; }
+    if (!name) return;
+    const g = A.ctx.createGain();
+    g.gain.value = 0;
+    g.connect(A.master);
+    const nodes = [];
+    const cfg = { house: [120, 0.05, 55], wind: [500, 0.06, 0], rain: [2500, 0.05, 0], basement: [90, 0.08, 41], hum: [200, 0.03, 60], void: [60, 0.07, 36] }[name] || [150, 0.04, 50];
+    const s = A.ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    const f = A.ctx.createBiquadFilter(); f.type = name === 'rain' ? 'highpass' : 'lowpass'; f.frequency.value = cfg[0];
+    const lfo = A.ctx.createOscillator(), lg = A.ctx.createGain(); lfo.frequency.value = 0.08; lg.gain.value = cfg[0] * 0.4; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+    s.connect(f); f.connect(g); s.start();
+    nodes.push(s, lfo);
+    if (cfg[2]) { const o = A.ctx.createOscillator(); o.type = 'sine'; o.frequency.value = cfg[2]; const og = A.ctx.createGain(); og.gain.value = 0.25; o.connect(og); og.connect(g); o.start(); nodes.push(o); }
+    g.gain.setTargetAtTime(cfg[1] * 3, A.ctx.currentTime, 1.0);
+    amb = { name: name, g: g, nodes: nodes };
+  };
   A.sfx = function (name, a, b) {
     if (!A.ready || A.muted) return;
     try { S[name] && S[name](a, b); } catch (e) { /* ignore audio errors */ }
@@ -196,15 +272,15 @@
   const SCALES = { major: [0, 2, 4, 5, 7, 9, 11], minor: [0, 2, 3, 5, 7, 8, 10], harm: [0, 2, 3, 5, 7, 8, 11] };
   // chord: [scale degree], built as triads on the scale
   const SONGS = {
-    title: { bpm: 76, root: 57, scale: 'minor', prog: [0, 5, 2, 6], arp: [0, 1, 2, 1, 3, 2, 1, 2], lead: 'soft', arpWave: 'triangle', arpVol: 0.05, bassVol: 0.07, seed: 3 },
-    meadow: { bpm: 124, root: 62, scale: 'major', prog: [0, 5, 3, 4], arp: [0, 1, 2, 1, 0, 2, 1, 2], lead: 'on', drums: 'light', seed: 11 },
-    road: { bpm: 138, root: 60, scale: 'major', prog: [0, 5, 3, 4, 0, 5, 1, 4], arp: [0, 2, 1, 2, 0, 2, 1, 2], lead: 'on', drums: 'pop', seed: 21 },
-    forest: { bpm: 104, root: 64, scale: 'minor', prog: [0, 5, 3, 4], arp: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'sparse', drums: 'tom', arpWave: 0.125, seed: 31 },
-    castle: { bpm: 118, root: 62, scale: 'harm', prog: [0, 5, 6, 4], arp: [0, 1, 2, 3, 2, 1, 0, 1], lead: 'on', drums: 'march', seed: 41 },
-    crypt: { bpm: 88, root: 60, scale: 'harm', prog: [0, 5, 3, 4], arp: [0, 2, 1, 2, 0, 2, 1, 3], lead: 'sparse', drums: 'tom', arpWave: 'triangle', seed: 51 },
-    volcano: { bpm: 158, root: 64, scale: 'harm', prog: [0, 2, 6, 4], arp: [0, 1, 2, 1, 0, 1, 2, 3], lead: 'on', drums: 'rock', seed: 61 },
-    witch: { bpm: 150, root: 65, scale: 'harm', prog: [0, 5, 3, 4, 0, 5, 1, 4], arp: [0, 2, 1, 2, 0, 3, 1, 2], lead: 'on', drums: 'rock', pad: true, seed: 71 },
-    ending: { bpm: 84, root: 65, scale: 'major', prog: [3, 4, 2, 5, 3, 4, 0, 0], arp: [0, 1, 2, 3, 2, 1, 2, 1], lead: 'soft', arpWave: 'triangle', arpVol: 0.05, seed: 81 },
+    // music-box style: slow, minor, high triangle arps, no drums
+    title: { bpm: 66, root: 69, scale: 'harm', prog: [0, 5, 3, 4], arp: [0, 2, 1, 2, 3, 2, 1, 2], lead: 'soft', arpWave: 'triangle', arpVol: 0.04, bassVol: 0.05, seed: 3 },
+    house: { bpm: 58, root: 64, scale: 'minor', prog: [0, 5, 0, 4], arp: [0, 1, 2, 1, 0, 2, 1, 3], lead: 'sparse', arpWave: 'triangle', arpVol: 0.025, bassVol: 0.04, seed: 9 },
+    calm: { bpm: 70, root: 65, scale: 'major', prog: [0, 3, 5, 4], arp: [0, 1, 2, 1, 3, 2, 1, 2], lead: 'soft', arpWave: 'triangle', arpVol: 0.03, bassVol: 0.04, seed: 12 },
+    dread: { bpm: 48, root: 52, scale: 'harm', prog: [0, 1, 0, 6], arp: [0, 2, 1, 3, 0, 2, 1, 2], lead: null, arpWave: 'sine', arpVol: 0.03, bassVol: 0.06, pad: true, seed: 17 },
+    chase: { bpm: 172, root: 57, scale: 'harm', prog: [0, 1, 0, 6, 0, 1, 5, 4], arp: [0, 1, 0, 2, 0, 1, 0, 3], lead: 'on', drums: 'rock', pad: true, seed: 23 },
+    sad: { bpm: 62, root: 62, scale: 'minor', prog: [5, 3, 0, 4], arp: [0, 1, 2, 3, 2, 1, 2, 1], lead: 'soft', arpWave: 'triangle', arpVol: 0.03, bassVol: 0.04, seed: 31 },
+    ending: { bpm: 72, root: 65, scale: 'major', prog: [3, 4, 2, 5, 3, 4, 0, 0], arp: [0, 1, 2, 3, 2, 1, 2, 1], lead: 'soft', arpWave: 'triangle', arpVol: 0.04, seed: 81 },
+    badend: { bpm: 52, root: 57, scale: 'harm', prog: [0, 5, 1, 4], arp: [0, 2, 1, 2, 0, 3, 1, 2], lead: 'soft', arpWave: 'sine', arpVol: 0.03, pad: true, seed: 91 },
   };
   function chordNotes(song, deg) {
     const sc = SCALES[song.scale];

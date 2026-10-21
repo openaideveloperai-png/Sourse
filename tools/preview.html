@@ -1,41 +1,63 @@
 <!doctype html>
 <html><head><meta charset="utf-8"><title>Sprite preview</title>
-<style>body{background:#3a3a44;margin:0;color:#fff;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style>
+<style>body{background:#2a2630;margin:0;color:#fff;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style>
 </head><body>
 <canvas id="c"></canvas>
 <script src="../js/core.js"></script>
+<script src="../js/art/lib.js"></script>
+<script src="../js/art/tiles.js"></script>
+<script src="../js/art/furniture.js"></script>
 <script src="../js/art_kid.js"></script>
-<script src="../js/art_world.js"></script>
-<script src="../js/art_mobs.js"></script>
+<script src="../js/engine/world.js"></script>
+<script src="../js/engine/events.js"></script>
 <script>
-// Lays out every frame group registered in PREVIEW at a big integer scale.
-const params = new URLSearchParams(location.search);
-const SCALE = +(params.get('s') || 6);
-const want = params.get('only');
-function groups() {
-  const out = [];
-  if (G.KID && G.KID.build) { G.KID.build(); for (const k of Object.keys(G.KID)) if (Array.isArray(G.KID[k])) out.push({ name: 'kid.' + k, frames: G.KID[k] }); }
-  if (G.PREVIEW) for (const g of G.PREVIEW()) out.push(g);
-  return want ? out.filter(g => g.name.startsWith(want)) : out;
-}
-const gs = groups();
-let W = 0, H = 0;
-const rows = gs.map(g => { const w = g.frames.reduce((s, f) => s + (f.w + 4), 0); const h = g.frames.reduce((m, f) => Math.max(m, f.h), 0); W = Math.max(W, w); return { g, w, h }; });
-H = rows.reduce((s, r) => s + r.h + 10, 0);
-const cv = document.getElementById('c');
-cv.width = (W + 4) * SCALE + 160; cv.height = H * SCALE + 20;
-const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
-ctx.fillStyle = params.get('bg') || '#5b6b52'; ctx.fillRect(0, 0, cv.width, cv.height);
-let y = 4;
-for (const r of rows) {
-  ctx.fillStyle = '#fff'; ctx.fillText(r.g.name, 4, y * SCALE + 12);
-  let x = 0;
-  for (const f of r.g.frames) {
-    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(160 + x * SCALE, y * SCALE, f.w * SCALE, f.h * SCALE);
-    ctx.drawImage(f.c, 160 + x * SCALE, y * SCALE, f.w * SCALE, f.h * SCALE);
-    x += f.w + 4;
-  }
-  y += r.h + 10;
-}
-document.title = 'ready';
+// Loads the same content scripts as index.html (art definitions live there too).
+document.write([...(window.PREVIEW_EXTRA || [])].map((s) => '<script src="' + s + '"><\/script>').join(''));
+</script>
+<script>
+// Pull the content script list from index.html at runtime is not possible from file://,
+// so content files are listed in tools/preview_files.js (kept in sync by tools/build.js).
+</script>
+<script src="preview_files.js"></script>
+<script>
+document.write((window.CONTENT_FILES || []).map((s) => '<script src="../' + s + '"><\/script>').join(''));
+</script>
+<script>
+// Shows every sprite and character whose name starts with ?only= (comma separated), at scale ?s=
+window.addEventListener('load', () => {
+  const q = new URLSearchParams(location.search);
+  const S = +(q.get('s') || 4);
+  const only = (q.get('only') || '').split(',').filter(Boolean);
+  const match = (n) => !only.length || only.some((o) => n.startsWith(o));
+  if (G.KID && G.KID.build) G.KID.build();
+  if (G.GAME && G.GAME.boot) try { G.GAME.boot(); } catch (e) {}
+  const groups = [];
+  for (const n of G.spriteNames()) if (match(n)) groups.push({ name: n, frames: G.getSprite(n).frames });
+  for (const n of G.charNames()) if (match('char:' + n) || match(n)) { const c = G.getChar(n); groups.push({ name: 'char:' + n, frames: [].concat(c.down, c.up, c.left, c.right || []) }); }
+  const cols = +(q.get('cols') || 4);
+  const PAD = 6;
+  // pack rows of up to `cols` groups
+  const rows = [];
+  for (let i = 0; i < groups.length; i += cols) rows.push(groups.slice(i, i + cols));
+  const cell = (g) => g.frames.reduce((s, f) => s + f.w + 2, 0);
+  let W = 0, H = 0;
+  const rh = rows.map((r) => { W = Math.max(W, r.reduce((s, g) => s + Math.max(cell(g), 60) + PAD * 2, 0)); return r.reduce((m, g) => Math.max(m, ...g.frames.map((f) => f.h)), 0); });
+  H = rh.reduce((s, h) => s + h * S + 16, 0);
+  const cv = document.getElementById('c');
+  cv.width = Math.max(200, W * S); cv.height = Math.max(50, H);
+  const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.fillStyle = q.get('bg') || '#4a4652'; x.fillRect(0, 0, cv.width, cv.height);
+  let y = 0;
+  rows.forEach((r, ri) => {
+    let cx = 0;
+    for (const g of r) {
+      x.fillStyle = '#fff'; x.font = '11px monospace'; x.fillText(g.name, cx * S + 2, y + 11);
+      let fx = cx;
+      for (const f of g.frames) { x.fillStyle = 'rgba(0,0,0,0.15)'; x.fillRect(fx * S, y + 14, f.w * S, f.h * S); x.drawImage(f.c, fx * S, y + 14, f.w * S, f.h * S); fx += f.w + 2; }
+      cx += Math.max(cell(g), 60) + PAD * 2;
+    }
+    y += rh[ri] * S + 16;
+  });
+  document.title = 'ready';
+});
 </script></body></html>

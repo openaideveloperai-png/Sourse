@@ -1,4 +1,4 @@
-// Boot, main loop, input (keyboard + touch), scaling, save data, scene flow.
+// Boot, main loop, input (keyboard + touch), scaling, scene flow, title screen.
 (function (G) {
   'use strict';
   const W = G.W, H = G.H;
@@ -8,43 +8,16 @@
   canvas.height = H;
   ctx.imageSmoothingEnabled = false;
   G.ctx = ctx;
-
   const q = new URLSearchParams(location.search);
-  G.DEV = q.get('dev') ? { god: q.get('god') === '1', hit: q.get('hit') === '1', skipTalk: q.get('talk') === '0' } : null;
-
-  // ---------------- save data ----------------
-  const KEY = 'wwh_save_v1';
-  G.Game = {
-    level: 0, deaths: 0, time: 0, flags: {}, levelDeaths: [], started: false, cleared: false,
-    reset() {
-      this.level = 0; this.deaths = 0; this.time = 0; this.flags = {}; this.levelDeaths = []; this.started = true; this.cleared = false;
-      this.persist();
-    },
-    persist() {
-      try {
-        localStorage.setItem(KEY, JSON.stringify({ level: this.level, deaths: this.deaths, time: this.time, flags: this.flags, levelDeaths: this.levelDeaths, started: this.started, cleared: this.cleared }));
-      } catch (e) { /* storage blocked: progress lasts for this session only */ }
-    },
-    load() {
-      try {
-        const d = JSON.parse(localStorage.getItem(KEY) || 'null');
-        if (d) Object.assign(this, d);
-      } catch (e) { /* ignore */ }
-    },
-    finishLevel(idx, deaths, time) {
-      this.levelDeaths[idx] = (this.levelDeaths[idx] || 0) + deaths;
-      this.level = idx + 1;
-      this.persist();
-    },
-  };
-  G.Game.load();
+  G.DEV = q.get('dev') ? {} : null;
 
   // ---------------- input ----------------
   const held = {};
   let pressed = {};
   const KEYMAP = {
     ArrowUp: 'up', KeyW: 'up', ArrowDown: 'down', KeyS: 'down', ArrowLeft: 'left', KeyA: 'left', ArrowRight: 'right', KeyD: 'right',
-    KeyZ: 'ok', Space: 'ok', Enter: 'ok', KeyJ: 'ok', KeyX: 'back', Escape: 'pause', KeyP: 'pause', KeyM: 'mute', KeyF: 'full', KeyH: 'hit',
+    KeyZ: 'ok', Space: 'ok', Enter: 'ok', KeyJ: 'ok', KeyX: 'back', Escape: 'back', Backspace: 'back', KeyK: 'back',
+    ShiftLeft: 'run', ShiftRight: 'run', KeyM: 'mute', KeyF: 'full',
   };
   window.addEventListener('keydown', (e) => {
     const k = KEYMAP[e.code];
@@ -54,39 +27,29 @@
     if (!held[k]) pressed[k] = true;
     held[k] = true;
   });
-  window.addEventListener('keyup', (e) => {
-    const k = KEYMAP[e.code];
-    if (k) held[k] = false;
-  });
+  window.addEventListener('keyup', (e) => { const k = KEYMAP[e.code]; if (k) held[k] = false; });
   window.addEventListener('blur', () => { for (const k in held) held[k] = false; });
   G.held = held;
+  G.press = (k) => { pressed[k] = true; }; // used by tests
 
-  // touch controls: a d-pad on the left, A and pause buttons on the right
   function bindTouch() {
-    const pad = document.getElementById('touch');
-    if (!pad) return;
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     if (isTouch) document.body.classList.add('touch');
     const dpad = document.getElementById('dpad');
+    if (!dpad) return;
     const setDir = (ev) => {
       const r = dpad.getBoundingClientRect();
       let mx = 0, my = 0;
       for (const t of ev.touches) {
         const x = t.clientX - r.left - r.width / 2, y = t.clientY - r.top - r.height / 2;
-        if (Math.abs(x) > r.width * 0.75 || Math.abs(y) > r.height * 0.75) continue;
-        const a = Math.atan2(y, x), d = Math.hypot(x, y);
-        if (d < r.width * 0.12) continue;
-        const oct = Math.round(a / (Math.PI / 4));
-        mx = Math.round(Math.cos(oct * Math.PI / 4));
-        my = Math.round(Math.sin(oct * Math.PI / 4));
+        if (Math.abs(x) > r.width * 0.75 || Math.abs(y) > r.height * 0.75 || Math.hypot(x, y) < r.width * 0.1) continue;
+        if (Math.abs(x) > Math.abs(y)) mx = Math.sign(x); else my = Math.sign(y);
       }
       const set = (k, v) => { if (v && !held[k]) pressed[k] = true; held[k] = v; };
       set('left', mx < 0); set('right', mx > 0); set('up', my < 0); set('down', my > 0);
     };
-    dpad.addEventListener('touchstart', (e) => { e.preventDefault(); G.Audio.init(); setDir(e); }, { passive: false });
-    dpad.addEventListener('touchmove', (e) => { e.preventDefault(); setDir(e); }, { passive: false });
-    dpad.addEventListener('touchend', (e) => { e.preventDefault(); setDir(e); }, { passive: false });
-    dpad.addEventListener('touchcancel', (e) => { e.preventDefault(); setDir(e); }, { passive: false });
+    for (const ev of ['touchstart', 'touchmove', 'touchend', 'touchcancel'])
+      dpad.addEventListener(ev, (e) => { e.preventDefault(); G.Audio.init(); setDir(e); }, { passive: false });
     const btn = (id, k) => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -94,31 +57,31 @@
       el.addEventListener('touchend', (e) => { e.preventDefault(); held[k] = false; }, { passive: false });
     };
     btn('btnA', 'ok');
-    btn('btnP', 'pause');
+    btn('btnB', 'back');
   }
   bindTouch();
-  canvas.addEventListener('pointerdown', () => { G.Audio.init(); pressed.ok = true; });
+  canvas.addEventListener('pointerdown', () => { G.Audio.init(); });
 
   function readInput() {
     let mx = (held.right ? 1 : 0) - (held.left ? 1 : 0);
     let my = (held.down ? 1 : 0) - (held.up ? 1 : 0);
-    const anyPress = !!(pressed.ok || pressed.up || pressed.down || pressed.left || pressed.right);
-    return { mx, my, ok: !!pressed.ok, back: !!pressed.back, pause: !!pressed.pause, up: !!pressed.up, down: !!pressed.down, left: !!pressed.left, right: !!pressed.right, anyPress };
+    const anyDir = !!(pressed.up || pressed.down || pressed.left || pressed.right);
+    return {
+      mx, my, run: !!held.run, ok: !!pressed.ok, back: !!pressed.back, menu: !!pressed.back,
+      up: !!pressed.up, down: !!pressed.down, left: !!pressed.left, right: !!pressed.right, anyDir, anyPress: anyDir || !!pressed.ok,
+    };
   }
 
   // ---------------- scaling ----------------
   function resize() {
-    const wrap = document.getElementById('wrap');
     const touch = document.body.classList.contains('touch');
     const portrait = window.innerHeight > window.innerWidth;
-    // leave room for the on-screen controls on touch devices
     const availW = touch && !portrait ? Math.max(window.innerWidth * 0.62, window.innerWidth - 330) : window.innerWidth;
     const availH = window.innerHeight - (touch && portrait ? 190 : 0);
     let s = Math.min(availW / W, availH / H);
-    if (s >= 1) s = Math.floor(s * 2) / 2 >= 2 ? Math.floor(s) : Math.max(1, Math.floor(s * 2) / 2);
+    if (s >= 2) s = Math.floor(s);
     canvas.style.width = Math.floor(W * s) + 'px';
     canvas.style.height = Math.floor(H * s) + 'px';
-    if (wrap) wrap.style.minHeight = '';
   }
   window.addEventListener('resize', resize);
   resize();
@@ -126,120 +89,151 @@
     try {
       if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
       else document.exitFullscreen().catch(() => {});
-    } catch (e) { /* fullscreen not allowed here */ }
+    } catch (e) { /* not allowed here */ }
+  };
+  G.fmtTime = function (s) {
+    s = Math.floor(s);
+    const m = Math.floor(s / 60), r = s % 60;
+    if (m >= 60) return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ':' + String(r).padStart(2, '0');
+    return m + ':' + String(r).padStart(2, '0');
   };
 
   // ---------------- scenes ----------------
-  let scene = null, next = null, fade = 0, fadeDir = 0, fadeCb = null;
-  G.setScene = function (s) { scene = s; };
-  G.getScene = function () { return scene; };
-  G.fadeTo = function (makeScene, speed) {
+  let scene = null, fade = 0, fadeDir = 0, fadeCb = null, fadeSpeed = 2;
+  G.setScene = (s) => { scene = s; };
+  G.getScene = () => scene;
+  G.fadeTo = function (make, speed) {
     if (fadeDir === 1) return;
     fadeDir = 1;
-    fadeCb = makeScene;
-    G.fadeSpeed = speed || 2.6;
-  };
-  G.goNext = function (idx) {
-    if (idx + 1 < G.LEVELS.length) G.fadeTo(() => new G.Play(idx + 1));
-    else G.fadeTo(() => new G.Ending(), 1.2);
-  };
-  G.startGame = function (cont) {
-    if (!cont) { G.Game.reset(); G.fadeTo(() => new G.Intro(), 1.5); }
-    else if (G.Game.cleared) G.fadeTo(() => new G.Ending(), 1.5);
-    else if (G.Game.level === 0 && !G.Game.flags.woke) G.fadeTo(() => new G.Wake(), 1.5);
-    else G.fadeTo(() => new G.Play(Math.min(G.Game.level, G.LEVELS.length - 1)), 1.5);
+    fadeCb = make;
+    fadeSpeed = speed || 2;
   };
 
-  // pause menu over the current scene
-  let paused = null;
-  G.openPause = function (sc) {
-    G.Audio.sfx('select');
-    paused = {
-      sc: sc,
-      menu: new G.Menu([
-        { label: 'Resume', act: () => { paused = null; } },
-        { label: () => 'Sound: ' + (G.Audio.muted ? 'OFF' : 'ON'), act: () => G.Audio.toggleMute() },
-        { label: () => 'Show hitboxes: ' + (G.DEV && G.DEV.hit ? 'ON' : 'OFF'), act: () => { G.DEV = G.DEV || {}; G.DEV.hit = !G.DEV.hit; } },
-        { label: 'Fullscreen', act: () => G.toggleFull() },
-        { label: 'Quit to title', act: () => { paused = null; G.Dialog.lines = null; G.fadeTo(() => new G.Title()); } },
-      ]),
-    };
+  // new game: content provides G.GAME.newGame() which returns the first scene
+  G.newGame = function () {
+    G.S = G.newState();
+    G.checkpointData = null;
+    G.Chase.active = null;
+    G.EV.clear();
+    return G.GAME.newGame();
+  };
+
+  // ---------------- title ----------------
+  G.Title = function () {
+    this.t = 0;
+    this.started = false;
+    const save = G.loadGame();
+    const items = [];
+    if (save) items.push({ label: 'Continue', act: () => G.continueGame() });
+    items.push({ label: 'New Game', act: () => { if (save && !this.confirm) { this.confirm = true; return; } G.fadeTo(() => G.newGame(), 0.8); } });
+    items.push({ label: () => 'Sound: ' + (G.Audio.muted ? 'OFF' : 'ON'), act: () => G.Audio.toggleMute() });
+    items.push({ label: 'Fullscreen', act: () => G.toggleFull() });
+    this.menu = new G.Menu(items);
+    G.Audio.ambience(null);
+  };
+  G.Title.prototype.update = function (dt, inp) {
+    this.t += dt;
+    if (!this.started) {
+      if (inp.anyPress || inp.back) { this.started = true; G.Audio.init(); G.Audio.music('title'); G.Audio.sfx('select'); }
+      return;
+    }
+    G.Audio.music('title');
+    const before = this.menu.i;
+    this.menu.update(inp);
+    if (this.menu.i !== before) this.confirm = false;
+  };
+  G.Title.prototype.draw = function (c) {
+    if (G.GAME && G.GAME.titleDraw) G.GAME.titleDraw(c, this.t);
+    else { c.fillStyle = '#000'; c.fillRect(0, 0, W, H); }
+    if (!this.started) {
+      if (Math.floor(this.t * 1.5) % 2 === 0) G.text(c, 'PRESS Z', W / 2, 176, { align: 'center', color: '#a89aa8', shadow: '#000' });
+    } else {
+      this.menu.draw(c, W / 2, 150, this.t);
+      if (this.confirm) G.text(c, 'Press again to erase your save and start over.', W / 2, 150 + this.menu.items.length * 14 + 4, { align: 'center', color: '#c86a7a', shadow: '#000' });
+    }
+    G.text(c, 'Arrows move   Z examine   X menu   Shift run', W / 2, H - 12, { align: 'center', color: '#4a4458', shadow: '#000' });
   };
 
   // ---------------- loop ----------------
-  let last = performance.now(), acc = 0, rt = 0;
+  let last = performance.now(), acc = 0;
   const STEP = 1 / 60;
-  function tick(ts) {
-    let dt = Math.min(0.1, (ts - last) / 1000);
-    last = ts;
-    acc += dt;
-    let steps = 0;
-    while (acc >= STEP && steps < 6) {
-      acc -= STEP;
-      steps++;
-      rt += STEP;
-      const inp = readInput();
-      pressed = {};
-      if (inp.mute === undefined && held.mute) { /* handled below */ }
-      update(STEP, inp);
-    }
-    if (steps === 6) acc = 0;
-    render();
-    requestAnimationFrame(tick);
-  }
-  let muteLatch = false, fullLatch = false, hitLatch = false;
+  let muteLatch = false, fullLatch = false;
   function update(dt, inp) {
-    if (held.mute && !muteLatch) { G.Audio.toggleMute(); }
+    if (held.mute && !muteLatch) G.Audio.toggleMute();
     muteLatch = !!held.mute;
     if (held.full && !fullLatch) G.toggleFull();
     fullLatch = !!held.full;
-    if (held.hit && !hitLatch) { G.DEV = G.DEV || {}; G.DEV.hit = !G.DEV.hit; }
-    hitLatch = !!held.hit;
     G.Shake.update(dt);
     if (fadeDir !== 0) {
-      fade += fadeDir * dt * G.fadeSpeed;
-      if (fadeDir === 1 && fade >= 1) {
-        fade = 1;
-        fadeDir = -1;
-        G.Dialog.lines = null;
-        scene = fadeCb();
-        fadeCb = null;
-      } else if (fadeDir === -1 && fade <= 0) { fade = 0; fadeDir = 0; }
-      if (scene && scene.update && fadeDir === -1) scene.update(dt, { mx: 0, my: 0 });
-      return;
-    }
-    if (paused) {
-      if (inp.pause || inp.back) { paused = null; return; }
-      paused.menu.update(inp);
+      fade += fadeDir * dt * fadeSpeed;
+      if (fadeDir === 1 && fade >= 1) { fade = 1; fadeDir = -1; G.Dialog.lines = null; scene = fadeCb(); fadeCb = null; }
+      else if (fadeDir === -1 && fade <= 0) { fade = 0; fadeDir = 0; }
       return;
     }
     if (scene && scene.update) scene.update(dt, inp);
   }
-  function render() {
+  function tick(ts) {
+    const dt = Math.min(0.1, (ts - last) / 1000);
+    last = ts;
+    acc += dt;
+    let n = 0;
+    while (acc >= STEP && n < 6) {
+      acc -= STEP;
+      n++;
+      const inp = readInput();
+      pressed = {};
+      update(STEP, inp);
+    }
+    if (n === 6) acc = 0;
     ctx.save();
     if (scene && scene.draw) scene.draw(ctx);
-    if (paused) {
-      ctx.fillStyle = 'rgba(7,4,12,0.78)';
-      ctx.fillRect(0, 0, W, H);
-      G.text(ctx, 'PAUSED', W / 2, 52, { align: 'center', scale: 2, color: '#ffffff', shadow: '#3a1460' });
-      G.text(ctx, 'Deaths so far: ' + G.Game.deaths + '    Time: ' + G.fmtTime(G.Game.time), W / 2, 80, { align: 'center', color: '#a9a2bb' });
-      paused.menu.draw(ctx, W / 2, 104, rt);
-      G.text(ctx, 'Arrows/WASD move  -  Z/Space confirm  -  M mute  -  F fullscreen', W / 2, H - 16, { align: 'center', color: '#5a5466' });
-    }
-    if (fade > 0) {
-      ctx.fillStyle = 'rgba(0,0,0,' + G.clamp(fade, 0, 1).toFixed(3) + ')';
-      ctx.fillRect(0, 0, W, H);
-    }
+    if (fade > 0) { ctx.fillStyle = 'rgba(0,0,0,' + G.clamp(fade, 0, 1).toFixed(3) + ')'; ctx.fillRect(0, 0, W, H); }
     ctx.restore();
+    requestAnimationFrame(tick);
   }
 
   // ---------------- boot ----------------
-  G.KID.build();
-  G.MOB.build();
-  const lvl = q.get('level');
-  if (G.DEV && lvl !== null) scene = new G.Play(+lvl);
-  else if (G.DEV && q.get('scene')) scene = new G[q.get('scene')]();
+  if (G.GAME && G.GAME.boot) G.GAME.boot();
+  if (G.DEV && q.get('map')) {
+    G.S = G.newState();
+    for (const it of (q.get('items') || '').split(',').filter(Boolean)) G.S.items.push(it);
+    for (const f of (q.get('flags') || '').split(',').filter(Boolean)) G.S.flags[f] = true;
+    const ex = new G.Explore();
+    ex.start(q.get('map'), +(q.get('x') || 2), +(q.get('y') || 4), q.get('dir') || 'down');
+    scene = ex;
+  } else if (G.DEV && q.get('scene')) scene = G.GAME.scenes[q.get('scene')]();
   else scene = new G.Title();
   requestAnimationFrame(tick);
+  // test helpers: stand next to an object facing it, then interact
+  G.dev = {
+    face(id) {
+      const ex = G.EX, room = ex.room, o = room.obj(id);
+      if (!o) return 'no object ' + id;
+      const TS = G.TS;
+      const cands = [];
+      for (let c = o.x; c < o.x + o.w; c++) cands.push([c, o.y + o.h, 'up']);
+      for (let r = o.y; r < o.y + o.h; r++) { cands.push([o.x - 1, r, 'right']); cands.push([o.x + o.w, r, 'left']); }
+      for (let c = o.x; c < o.x + o.w; c++) cands.push([c, o.y - 1, 'down']);
+      for (const [c, r, d] of cands) {
+        if (room.isSolid(c, r)) continue;
+        ex.p.x = c * TS + 8; ex.p.y = d === 'down' ? r * TS + 14 : d === 'up' ? r * TS + 7 : r * TS + 12; ex.p.dir = d;
+        return [c, r, d];
+      }
+      return 'no free side';
+    },
+    use(id) { const r = G.dev.face(id); G.press('ok'); return r; },
+    // is there a walkable path from the player to a free tile next to object id?
+    reachable(id) {
+      const ex = G.EX, room = ex.room, o = room.obj(id);
+      if (!o) return false;
+      const TS = G.TS;
+      const pc = Math.floor(ex.p.x / TS), pr = Math.floor((ex.p.y - 2) / TS);
+      const goals = [];
+      for (let c = o.x - 1; c <= o.x + o.w; c++) for (let r = o.y - 1; r <= o.y + o.h; r++) if (!room.isSolid(c, r)) goals.push([c, r]);
+      if (o.def.touch || (o.def.door && o.def.door.walk) || !o.solid) goals.push([o.x, o.y]);
+      return goals.some(([c, r]) => (c === pc && r === pr) || G.findPath(room, pc, pr, c, r) !== null);
+    },
+    state() { return { map: G.S.map, items: G.S.items.slice(), flags: Object.keys(G.S.flags).filter((k) => k[0] !== '@'), busy: G.EV.busy, dialog: G.Dialog.active, ui: G.UI.active }; },
+  };
   window.__G = G;
 })(window.G);

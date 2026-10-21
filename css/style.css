@@ -12,5 +12,5 @@ body.touch #touch { display: flex; }
 #dpad .r { top: 61px; right: 10px; border-left-color: #8a7aa8; }
 #btns { display: flex; gap: 14px; align-items: center; }
 #btns button { width: 72px; height: 72px; border-radius: 50%; border: 2px solid #5a3a8a; background: #2a1640; color: #e8d8ff; font: bold 22px monospace; touch-action: none; }
-#btns #btnP { width: 48px; height: 48px; font-size: 14px; background: #1a1424; border-color: #3a2f4d; }
+#btns #btnB { width: 48px; height: 48px; font-size: 14px; background: #1a1424; border-color: #3a2f4d; }
 @media (orientation: landscape) { body.touch #wrap { flex-direction: row; } body.touch #touch { position: fixed; bottom: 8px; left: 0; right: 0; max-width: none; pointer-events: none; } body.touch #touch > * { pointer-events: auto; opacity: 0.7; } }
