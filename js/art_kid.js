@@ -187,6 +187,11 @@
       fr(build(HEAD_U, TORSO_U, LEGS_U_A, { bag: BAG_D, bagX: 12, bob: 1 })),
       fr(build(HEAD_U, TORSO_U, LEGS_U_B, { bag: BAG_D, bagX: 11, bob: 1 })),
     ];
+    // blink: eyes become a closed line for a few frames while idle
+    const blinkD = HEAD_D.map((row, i) => (i === 8 ? row.replace(/e/g, 's') : i === 9 ? row.replace(/e/g, 'S') : row));
+    const blinkL = HEAD_L.map((row, i) => (i === 8 ? row.replace(/e/g, 's') : i === 9 ? row.replace(/e/g, 'S') : row));
+    K.downBlink = fr(build(blinkD, TORSO_D, LEGS_D, { bag: BAG_D, bagX: 0 }));
+    K.leftBlink = fr(build(blinkL, TORSO_L, LEGS_L, { bag: BAG_L, bagX: 6, bagY: -1 }));
     K.left = [
       fr(build(HEAD_L, TORSO_L, LEGS_L, { bag: BAG_L, bagX: 6, bagY: -1 })),
       fr(build(HEAD_L, TORSO_L_A, LEGS_L_A, { bag: BAG_L, bagX: 1, bagY: -1, bob: 1 })),

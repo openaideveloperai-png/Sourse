@@ -21,6 +21,7 @@
     knight: ["Cut down by a passing knight. He didn't notice.", 'Stood still too long. A knight rode by.', 'The knight did not slow down.', 'Wrong place. Wrong time. Standing still.'],
     slime: ['Absorbed by a slime.', 'Death by jelly.', 'The slime was not friendly.'],
     carriage: ['Run over by a carriage. Again.', 'Should have looked both ways.', 'Hit by Carriage-kun.'],
+    cavalry: ['Trampled by the royal cavalry.', 'The cavalry has right of way.', 'Cut down at full gallop.'],
     wolf: ['Eaten by wolves.', 'The wolves were, in fact, hungry.'],
     crow: ['Pecked to death by crows.', 'A murder of crows. Literally.'],
     arrow: ['Shot by a wall.', 'Took an arrow to the everything.'],
@@ -60,7 +61,7 @@
     this.hoofT = 0;
     this.portalOpen = this.L.shards.length === 0;
     this.lastCp = -1;
-    this.firstVisit = !G.Game.flags['seen' + idx];
+    this.firstVisit = !G.Game.flags['seen' + idx] && !(G.DEV && G.DEV.skipTalk);
     G.FX.clear();
     G.Audio.music(this.def.music || 'meadow');
     this.dynPit = {};
@@ -322,7 +323,7 @@
           if (hz.skin === 'crow') {
             shadow(p.x, p.y + 6, 4);
             list.push({ y: p.y + 6, draw: (ctx, ox, oy) => G.drawFrame(ctx, fr(mf.crow, 12, k * 0.2), ox + p.x, oy + p.y + 1, hz.dir < 0) });
-          } else if (hz.skin === 'knight') {
+          } else if (hz.skin === 'cavalry') {
             list.push({ y: p.y + 7, draw: (ctx, ox, oy) => G.drawFrame(ctx, fr(mf.knight, 12, k * 0.2), ox + p.x, oy + p.y + 8, hz.dir < 0) });
           } else {
             list.push({ y: p.y - 100, ground: true, draw: (ctx, ox, oy) => { ctx.fillStyle = 'rgba(10,6,18,0.3)'; ctx.fillRect(Math.round(ox + p.x - hz.len / 2), Math.round(oy + p.y + 4), hz.len, 4); } });
@@ -393,7 +394,9 @@
     const arr = d === 'down' ? K.down : d === 'up' ? K.up : K.left;
     const seq = [0, 1, 0, 2];
     const f = S.moving ? seq[Math.floor(this.anim * 9) % 4] : 0;
-    G.drawFrame(ctx, arr[f], x, y + 1, d === 'right');
+    const blink = !S.moving && this.t % 3.1 > 2.95 && d !== 'up';
+    const fr = blink ? (d === 'down' ? K.downBlink : K.leftBlink) : arr[f];
+    G.drawFrame(ctx, fr, x, y + 1, d === 'right');
   };
 
   Play.prototype.drawDeath = function (ctx, ox, oy) {

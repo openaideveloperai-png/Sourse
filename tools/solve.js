@@ -170,6 +170,12 @@ function solve(idx) {
     if (next.size === 0) break;
   }
   const res = { idx, id: def.id, solved: !!goal, margin };
+  if (!goal && process.env.COVER) {
+    // which tiles were ever reached (any time, any shards)
+    const seen = new Uint8Array(G.COLS * G.ROWS);
+    for (const lay of layers) for (const [, bits] of lay) for (let k = 0; k < N; k++) if ((bits[k >> 5] >>> (k & 31)) & 1) seen[Math.floor(cy(Math.floor(k / NX)) / 16) * G.COLS + Math.floor(cx(k % NX) / 16)] = 1;
+    for (let r = 0; r < G.ROWS; r++) { let line = ''; for (let c = 0; c < G.COLS; c++) line += seen[r * G.COLS + c] ? '*' : L.at(c, r); console.log(line); }
+  }
   if (!goal) {
     res.bestShards = popcount(bestMask) + '/' + L.shards.length;
     res.reached = layers.length - 1;

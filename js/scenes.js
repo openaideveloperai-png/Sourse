@@ -249,7 +249,9 @@
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.draw(ctx, sx, sy);
     G.FX.draw(ctx, sx, sy, 0);
-    G.Light.draw(ctx, sc.dark === undefined ? 0.8 : sc.dark, '#03061a', st.lights(sc.t), sc.t);
+    const lights = st.lights(sc.t);
+    for (const a of sc.actors) if (a.visible) lights.push({ x: a.x, y: a.y - 10, r: 30, i: 0.55 });
+    G.Light.draw(ctx, sc.dark === undefined ? 0.8 : sc.dark, '#03061a', lights, sc.t);
     G.FX.draw(ctx, sx, sy, 1);
     G.vignette(ctx, 0.6);
   }

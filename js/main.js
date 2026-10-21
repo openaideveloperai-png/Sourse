@@ -10,7 +10,7 @@
   G.ctx = ctx;
 
   const q = new URLSearchParams(location.search);
-  G.DEV = q.get('dev') ? { god: q.get('god') === '1', hit: q.get('hit') === '1' } : null;
+  G.DEV = q.get('dev') ? { god: q.get('god') === '1', hit: q.get('hit') === '1', skipTalk: q.get('talk') === '0' } : null;
 
   // ---------------- save data ----------------
   const KEY = 'wwh_save_v1';
@@ -77,7 +77,7 @@
         const a = Math.atan2(y, x), d = Math.hypot(x, y);
         if (d < r.width * 0.12) continue;
         const oct = Math.round(a / (Math.PI / 4));
-        mx = [1, 1, 0, -1, -1, -1, 0, 1, 1][oct + 4] !== undefined ? Math.round(Math.cos(oct * Math.PI / 4)) : 0;
+        mx = Math.round(Math.cos(oct * Math.PI / 4));
         my = Math.round(Math.sin(oct * Math.PI / 4));
       }
       const set = (k, v) => { if (v && !held[k]) pressed[k] = true; held[k] = v; };
@@ -97,7 +97,7 @@
     btn('btnP', 'pause');
   }
   bindTouch();
-  canvas.addEventListener('pointerdown', () => { G.Audio.init(); pressed.ok = true; setTimeout(() => {}, 0); });
+  canvas.addEventListener('pointerdown', () => { G.Audio.init(); pressed.ok = true; });
 
   function readInput() {
     let mx = (held.right ? 1 : 0) - (held.left ? 1 : 0);
@@ -110,7 +110,10 @@
   function resize() {
     const wrap = document.getElementById('wrap');
     const touch = document.body.classList.contains('touch');
-    const availW = window.innerWidth, availH = window.innerHeight - (touch && window.innerHeight > window.innerWidth ? 190 : 0);
+    const portrait = window.innerHeight > window.innerWidth;
+    // leave room for the on-screen controls on touch devices
+    const availW = touch && !portrait ? Math.max(window.innerWidth * 0.62, window.innerWidth - 330) : window.innerWidth;
+    const availH = window.innerHeight - (touch && portrait ? 190 : 0);
     let s = Math.min(availW / W, availH / H);
     if (s >= 1) s = Math.floor(s * 2) / 2 >= 2 ? Math.floor(s) : Math.max(1, Math.floor(s * 2) / 2);
     canvas.style.width = Math.floor(W * s) + 'px';
@@ -129,6 +132,7 @@
   // ---------------- scenes ----------------
   let scene = null, next = null, fade = 0, fadeDir = 0, fadeCb = null;
   G.setScene = function (s) { scene = s; };
+  G.getScene = function () { return scene; };
   G.fadeTo = function (makeScene, speed) {
     if (fadeDir === 1) return;
     fadeDir = 1;
