@@ -28,10 +28,12 @@
       catch (e) { console.error('event error', e); r = { done: true }; }
       if (r.done) {
         this.cur = null;
+        this.worldRuns = false;
         if (G.EX && G.EX.room) G.EX.room.refresh();
       }
     },
-    clear() { this.queue = []; this.cur = null; },
+    clear() { this.queue = []; this.cur = null; this.worldRuns = false; },
+    worldRuns: false,
   });
 
   const ex = () => G.EX;
@@ -230,8 +232,20 @@
       ex().darkOverride = to === undefined ? base : to;
     },
     // the protagonist's current objective, shown in the pause menu
-    goal(text) { G.S.flags['@goal'] = text; },
-    chapter(text) { G.S.chapter = text; ex().banner = { text: text, t: 0 }; },
+    // the current objective (pause menu); id selects the phone hint G.HINTS[id]
+    goal(text, id) {
+      if (G.S.flags['@goalId'] !== (id || null) || G.S.flags['@goal'] !== text) { G.S.flags['@goalSince'] = G.S.time; G.S.flags['@goalCalls'] = 0; }
+      G.S.flags['@goal'] = text; G.S.flags['@goalId'] = id || null;
+    },
+    // chapter banner; also autosaves (browser tabs get closed) unless something is hunting you
+    chapter(text) {
+      G.S.chapter = text; ex().banner = { text: text, t: 0 };
+      if (!G.Chase.active && !G.TEST) G.saveGame();
+    },
+    // a speech bubble that does not wait (safe during chases); id may be 'player' or 'follower'
+    bubbleNow(id, kind, time) { ex().bubbles.push({ id: id, kind: kind, t: 0, life: time || 0.9 }); },
+    // let the chaser and walkers keep moving while this event runs (cutscenes during a chase)
+    worldRuns(on) { EV.worldRuns = on !== false; },
     location(text) { ex().banner = { text: text, t: 0, small: true }; },
 
     // ---------- puzzles (return values) ----------

@@ -8,7 +8,10 @@
 //   followDelay: 1.6,           seconds after you leave before it appears
 //   safe: ['mapId', ...],       rooms it will not follow into
 //   duration: null,             seconds until it gives up (null = until lost)
-//   loseAfterHide: 3.5,         seconds hidden before it gives up
+//   loseAfterHide: 5.5,         seconds hidden before it gives up
+//   timer: 14,                  after this many seconds, the next room change ends the chase
+//   seenText: '...',            game over text when it sees you climb into a hiding spot
+//   music: 'hunt',              music while chasing
 //   cause: 'monster',           game over cause id
 //   onEnd: function* (E) {}     runs when the chase ends normally
 // }
@@ -29,9 +32,12 @@
         x = c * TS + 8; y = r * TS + 14;
       }
       this.active = { cfg: cfg, map: G.S.map, x: x, y: y, dir: 'down', t: 0, delay: cfg.delay === undefined ? 0.6 : cfg.delay, path: null, repath: 0, state: 'hunt', hiddenT: 0, walkT: 0, away: null, searchT: 0 };
-      G.Audio.music(cfg.music || 'chase');
+      // chain latches work once per chase
+      for (const k of Object.keys(G.S.flags)) if (k.indexOf('@latched:') === 0) delete G.S.flags[k];
+      G.Audio.music(this.musicName());
       G.Audio.sfx('sting');
     },
+    musicName() { const a = this.active; return (a && a.cfg.music) || 'hunt'; },
     stop(silent) {
       const a = this.active;
       this.active = null;
@@ -50,7 +56,16 @@
       }
       // Ao Oni rule: once the timer has run out, changing rooms ends the chase
       if (cfg.timer && a.t >= cfg.timer) { this.vanish(true); return; }
-      a.away = { map: toMap, from: fromMap, x: arrive.x, y: arrive.y, t: cfg.followDelay === undefined ? 1.6 : cfg.followDelay };
+      const fd = cfg.followDelay === undefined ? 1.6 : cfg.followDelay;
+      // already on his way: doubling back toward him does not reset the timer (no door-dancing)
+      if (a.away) {
+        const back = toMap === a.away.from;
+        a.away.map = toMap; a.away.from = fromMap; a.away.x = arrive.x; a.away.y = arrive.y;
+        a.away.t = back ? Math.min(a.away.t, 0.5) : Math.min(a.away.t + 0.5, fd);
+        G.Audio.sfx('keys');
+        return;
+      }
+      a.away = { map: toMap, from: fromMap, x: arrive.x, y: arrive.y, t: fd };
       a.map = null;
       G.Audio.sfx('keys');
     },
@@ -72,7 +87,7 @@
       if (a.away) {
         a.away.t -= dt;
         if (a.away.t <= 0 && a.away.map === G.S.map) {
-          a.map = G.S.map; a.x = a.away.x; a.y = a.away.y; a.away = null; a.delay = 0.15;
+          a.map = G.S.map; a.x = a.away.x; a.y = a.away.y; a.away = null; a.delay = cfg.arriveDelay === undefined ? 0.5 : cfg.arriveDelay;
           a.latched = {};
           G.Audio.sfx('door');
         } else if (a.away.map !== G.S.map) a.away.map = G.S.map; // player moved on again
@@ -92,10 +107,15 @@
           const opts = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dx, dy]) => !room.isSolid(c + dx, r + dy));
           if (opts.length) { const o = opts[Math.floor(G.hash(Math.floor(a.t * 3), c, r) * opts.length)]; a.path = [[c + o[0], r + o[1]]]; }
         }
-        if (a.hiddenT > (cfg.loseAfterHide || 3.5)) { this.vanish(true); return; }
+        // he is in the room: breathing, heartbeat, keys when he is close
+        a.hideBeat = (a.hideBeat || 0) - dt;
+        if (a.hideBeat <= 0) { a.hideBeat = 0.8; G.Audio.sfx('heartbeat', 0.45); }
+        if (!a.breathed) { a.breathed = true; G.Audio.sfx('breath'); }
+        if (Math.hypot(p.x - a.x, p.y - a.y) < TS * 2) { a.closeKeys = (a.closeKeys || 0) - dt; if (a.closeKeys <= 0) { a.closeKeys = 1.1; G.Audio.sfx('keys', 0.8); } }
+        if (a.hiddenT > (cfg.loseAfterHide || 5.5)) { this.vanish(true); return; }
       } else {
         a.state = 'hunt';
-        a.hiddenT = 0;
+        a.hiddenT = 0; a.breathed = false;
         a.repath -= dt;
         if (a.repath <= 0) {
           a.repath = 0.2;
@@ -122,9 +142,11 @@
         const dx = p.x - a.x, dy = p.y - a.y, d = Math.hypot(dx, dy);
         if (d > 0.5) { a.x += (dx / d) * Math.min(d, sp * dt); a.y += (dy / d) * Math.min(d, sp * dt); }
       }
-      // footsteps
+      // footsteps and keys, louder as he gets closer
+      const dist = Math.hypot(p.x - a.x, p.y - a.y);
+      const vol = G.clamp(1.2 - dist / 160, 0.15, 1);
       a.stepT = (a.stepT || 0) - dt;
-      if (a.stepT <= 0) { a.stepT = 0.32; G.Audio.sfx('thud', 0.6); }
+      if (a.stepT <= 0) { a.stepT = 0.36; a.stepN = (a.stepN || 0) + 1; G.Audio.sfx('thud', 0.6 * vol); if (a.stepN % 2 === 0 && cfg.keys !== false) G.Audio.sfx('keys', vol * 0.7); }
       // caught?
       if (!p.hidden && Math.abs(p.x - a.x) < 9 && Math.abs(p.y - a.y) < 8) {
         const cause = cfg.cause || 'monster';
@@ -174,13 +196,23 @@
       }
     },
     // ---- rationed ambush: returns true at most once per cooldown, with a chance ----
+    // never in tests, at most `max` per game (default 3), never within 30 s of a retry or load
     lastAmbush: -1e9,
-    ambushReady(chance, cooldown) {
-      if (this.active || this.walkers.length) return false;
+    ambushReady(chance, cooldown, max) {
+      if (G.TEST || this.active || this.walkers.length) return false;
+      if ((G.S.flags['@ambushes'] || 0) >= (max || 3)) return false;
+      if (G.S.time - (G.lastLoadTime || -1e9) < 30) return false;
       if (G.S.time - Math.max(this.lastAmbush, G.S.flags['@lastChase'] || -1e9) < (cooldown || 240)) return false;
       if (Math.random() > (chance === undefined ? 0.4 : chance)) return false;
       this.lastAmbush = G.S.time;
+      G.S.flags['@ambushes'] = (G.S.flags['@ambushes'] || 0) + 1;
       return true;
+    },
+    // a dim cold light around him in very dark rooms, so he is seen before he is on you
+    lights(ox, oy, dark, out) {
+      const a = this.active;
+      if (!a || a.map !== G.S.map || a.away || dark < 0.7) return;
+      out.push({ x: a.x + ox, y: a.y - 14 + oy, r: 24, col: '#7a8a9a', glow: 0.12, i: 0.8 });
     },
     draw(ctx, list) {
       for (const w of this.walkers) {

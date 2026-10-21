@@ -32,12 +32,16 @@
     this.p.y = y * TS + 14;
     if (dir) this.p.dir = dir;
     this.p.hidden = false;
+    // the companion starts one tile behind the player (or on the player if that tile is solid)
     this.trail = [];
-    for (let i = 0; i < 20; i++) this.trail.push([this.p.x, this.p.y, this.p.dir]);
+    const bk = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[this.p.dir] || [0, 1];
+    const bc = x + bk[0], br = y + bk[1];
+    const behind = this.room.isSolid(bc, br) ? [this.p.x, this.p.y] : [bc * TS + 8, br * TS + 14];
+    for (let i = 0; i < 20; i++) { const k = Math.max(0, i - 6) / 13; this.trail.push([behind[0] + (this.p.x - behind[0]) * k, behind[1] + (this.p.y - behind[1]) * k, this.p.dir]); }
     this.touching = new Set(this.touchedNow());
     this.darkOverride = null;
     const def = this.room.def;
-    G.Audio.music(G.Chase.active ? 'chase' : def.music || null);
+    G.Audio.music(G.Chase.active ? G.Chase.musicName() : def.music || null);
     G.Audio.ambience(def.ambience || null);
     if (def.location) this.banner = { text: def.location, t: 0, small: true };
   };
@@ -156,7 +160,8 @@
     if (G.Chase.seesHiding()) {
       G.Audio.sfx('door');
       yield* E.wait(0.3);
-      this.gameOver(G.Chase.active.cfg.cause || 'monster', { scare: G.Chase.active.cfg.scare || G.Chase.active.cfg.char, text: 'It saw you hide.' });
+      const cc = G.Chase.active.cfg;
+      this.gameOver(cc.cause || 'monster', { scare: cc.scare || cc.char, text: cc.seenText || 'He saw you climb in. Break his line of sight first: change rooms, then hide.' });
       for (;;) yield;
     }
     G.Audio.sfx('closet');
@@ -195,8 +200,12 @@
     if (G.Dialog.active) { G.Dialog.update(dt, inp); G.EV.update(dt, inp); return; }
     const def = this.room.def;
     if (def.update) def.update(G.EV.api, dt);
-    G.Chase.update(dt);
-    G.Chase.updateWalkers(dt);
+    // the hunter only moves while the player can (events and door transitions freeze both),
+    // except while hiding, or when an event asks for it (E.worldRuns(true))
+    if (!G.EV.busy || this.p.hidden || G.EV.worldRuns) {
+      G.Chase.update(dt);
+      G.Chase.updateWalkers(dt);
+    }
     if (G.UI.active) return;
     if (G.EV.busy) { G.EV.update(dt, inp); this.p.moving = false; return; }
     if (inp.menu) { G.UI.openMenu(); return; }
@@ -208,14 +217,19 @@
     const ox = p.x, oy = p.y;
     if (mx || my) {
       p.dir = mx > 0 ? 'right' : mx < 0 ? 'left' : my > 0 ? 'down' : 'up';
-      G.movePlayer(this.room, p, mx, my, dt, G.PLAYER.speed * (inp.run && G.flag('canRun') !== false ? G.PLAYER.run : 1));
+      // no running while hunted (the classics have no dash; it would beat every chase)
+      const danger = !!G.Chase.active || G.Chase.walkers.length > 0;
+      let run = inp.run && G.flag('canRun') !== false && !danger;
+      if (inp.run && danger && !G.S.flags.toldNoRun) { G.S.flags.toldNoRun = true; this.banner = { text: "Haru's legs are shaking too much to run.", t: 0, small: true }; }
+      G.movePlayer(this.room, p, mx, my, dt, G.PLAYER.speed * (run ? G.PLAYER.run : 1));
+      this.running = run;
     }
     p.moving = Math.abs(p.x - ox) + Math.abs(p.y - oy) > 0.01;
     if (p.moving) { this.trail.push([p.x, p.y, p.dir]); if (this.trail.length > 60) this.trail.shift(); }
     if (p.moving) {
-      p.walkT += dt * (inp.run ? 1.5 : 1);
+      p.walkT += dt * (this.running ? 1.5 : 1);
       this.stepT -= dt;
-      if (this.stepT <= 0) { this.stepT = inp.run ? 0.2 : 0.3; G.Audio.sfx('step', this.room.def.floorSound); }
+      if (this.stepT <= 0) { this.stepT = this.running ? 0.2 : 0.3; G.Audio.sfx('step', this.room.def.floorSound); }
     } else p.walkT = 0;
     // bumping into doors / pushables
     if ((mx || my) && !p.moving) {
@@ -321,6 +335,7 @@
     const fol = G.S.flags.follower;
     if (fol && !p.hidden && this.trail.length) {
       const tr = this.trail[Math.max(0, this.trail.length - 14)];
+      this.folPos = tr;
       const fm = p.moving;
       this.folWalk = (this.folWalk || 0) + (fm ? 1 / 60 : 0);
       list.push({ y: tr[1] - 0.5, draw: (c, X, Y) => {
@@ -336,6 +351,7 @@
     // lighting
     const dark = this.darkOverride !== null && this.darkOverride !== undefined ? this.darkOverride : def.dark || 0;
     if (dark > 0) {
+      G.Chase.lights(ox, oy, dark, lights);
       lights.push({ x: p.x + ox, y: p.y - 10 + oy, r: G.S.flags.playerLight || def.light || 58, i: 1, col: G.S.flags.playerLightCol, glow: 0.15, flicker: !!G.S.flags.playerLightCol });
       G.Light.draw(ctx, dark, def.tintDark || '#05030a', lights, this.t);
     } else if (lights.length) {
@@ -356,6 +372,7 @@
     for (const b of this.bubbles) {
       let x, y;
       if (b.id === 'player') { x = p.x; y = p.y - 26; }
+      else if (b.id === 'follower') { if (!this.folPos || !G.S.flags.follower) continue; x = this.folPos[0]; y = this.folPos[1] - 18; }
       else { const o = room.obj(b.id); if (!o) continue; const a = o.anchor(); x = a.x; y = a.y - (o.char ? 26 : o.h * TS + 6); }
       const f = G.MOB_BUBBLES && G.MOB_BUBBLES[b.kind];
       if (f) G.drawFrame(ctx, f, ox + x + 6, oy + y - Math.round((1 - Math.min(1, b.t * 8)) * 4));

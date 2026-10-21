@@ -31,6 +31,7 @@ const path = require('path');
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   await p.goto('file://' + path.resolve(__dirname, '../index.html') + '?dev=1');
   await p.waitForTimeout(300);
+  await p.evaluate(() => { window.__G.TEST = true; });
   const steps = await p.evaluate((r) => { const R = (window.__G.WALKTHROUGH || {})[r]; return typeof R === 'function' ? R() : R || null; }, route);
   if (!steps) { console.log('no route', route); process.exit(1); }
   if (steps[0] && steps[0].start) {

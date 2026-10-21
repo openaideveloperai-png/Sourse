@@ -234,7 +234,7 @@
     blip(pitch, wave) { const t = now(); osc(wave || 0.25, pitch || 520, t, 0.035, 0.035, { release: 0.03 }); },
     select() { const t = now(); osc(0.5, 660, t, 0.05, 0.06); osc(0.5, 990, t + 0.04, 0.07, 0.05); },
     rbd() { S.sting(); },
-    keys() { const t = now(); for (let i = 0; i < 6; i++) osc('triangle', 2400 + Math.random() * 1800, t + i * 0.045 + Math.random() * 0.02, 0.06, 0.03); noise(t, 0.3, 0.04, 'highpass', 5000); },
+    keys(v) { const t = now(); v = v === undefined ? 1 : v; for (let i = 0; i < 6; i++) osc('triangle', 2400 + Math.random() * 1800, t + i * 0.045 + Math.random() * 0.02, 0.06, 0.03 * v); noise(t, 0.3, 0.04 * v, 'highpass', 5000); },
     latch() { const t = now(); for (let i = 0; i < 4; i++) noise(t + i * 0.05, 0.04, 0.18, 'bandpass', 2800 + i * 300, { q: 5 }); osc('square', 900, t + 0.22, 0.05, 0.05); },
     ring() { const t = now(); for (let r = 0; r < 2; r++) for (let i = 0; i < 10; i++) { osc('square', 1300, t + r * 0.5 + i * 0.04, 0.03, 0.035); osc('square', 1600, t + r * 0.5 + i * 0.04 + 0.02, 0.02, 0.025); } },
     meow() { const t = now(); osc('triangle', 700, t, 0.4, 0.06, { slide: 1000, slideT: 0.12, vib: [8, 30] }); osc('triangle', 1000, t + 0.15, 0.3, 0.04, { slide: 600 }); },
@@ -288,6 +288,8 @@
     house: { bpm: 58, root: 64, scale: 'minor', prog: [0, 5, 0, 4], arp: [0, 1, 2, 1, 0, 2, 1, 3], lead: 'sparse', arpWave: 'triangle', arpVol: 0.025, bassVol: 0.04, seed: 9 },
     calm: { bpm: 70, root: 65, scale: 'major', prog: [0, 3, 5, 4], arp: [0, 1, 2, 1, 3, 2, 1, 2], lead: 'soft', arpWave: 'triangle', arpVol: 0.03, bassVol: 0.04, seed: 12 },
     dread: { bpm: 48, root: 52, scale: 'harm', prog: [0, 1, 0, 6], arp: [0, 2, 1, 3, 0, 2, 1, 2], lead: null, arpWave: 'sine', arpVol: 0.03, bassVol: 0.06, pad: true, seed: 17 },
+    // the main chase music: slow pulse, heartbeat kick, no melody (keys carry the rhythm)
+    hunt: { bpm: 120, root: 50, scale: 'harm', prog: [0, 1, 0, 6], arp: [0, 2, 1, 3, 0, 2, 1, 2], lead: null, arpWave: 'sine', arpVol: 0.02, bassVol: 0.07, pad: true, drums: 'heart', seed: 41 },
     chase: { bpm: 172, root: 57, scale: 'harm', prog: [0, 1, 0, 6, 0, 1, 5, 4], arp: [0, 1, 0, 2, 0, 1, 0, 3], lead: 'on', drums: 'rock', pad: true, seed: 23 },
     sad: { bpm: 62, root: 62, scale: 'minor', prog: [5, 3, 0, 4], arp: [0, 1, 2, 3, 2, 1, 2, 1], lead: 'soft', arpWave: 'triangle', arpVol: 0.03, bassVol: 0.04, seed: 31 },
     ending: { bpm: 72, root: 65, scale: 'major', prog: [3, 4, 2, 5, 3, 4, 0, 0], arp: [0, 1, 2, 3, 2, 1, 2, 1], lead: 'soft', arpWave: 'triangle', arpVol: 0.04, seed: 81 },
@@ -381,6 +383,7 @@
     if (dr === 'pop') { if (pos % 8 === 0) kick(0.16); if (pos % 8 === 4) snare(0.07); if (pos % 2 === 0) hat(0.02); }
     if (dr === 'march') { if (pos % 4 === 0) kick(0.14); if (pos === 4 || pos === 12 || pos === 14 || pos === 15) snare(0.06); }
     if (dr === 'tom') { if (pos === 0 || pos === 10) osc('sine', 90, t, 0.25, 0.14, { slide: 50, dest: D }); }
+    if (dr === 'heart') { if (pos === 0 || pos === 8) osc('sine', 64, t, 0.16, 0.2, { slide: 38, dest: D }); if (pos === 2 || pos === 10) osc('sine', 58, t, 0.18, 0.14, { slide: 34, dest: D }); }
     if (dr === 'rock') { if (pos % 8 === 0 || pos === 6) kick(0.17); if (pos % 8 === 4) snare(0.08); hat(pos % 2 ? 0.012 : 0.024); }
   }
 })(window.G);

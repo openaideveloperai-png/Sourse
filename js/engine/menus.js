@@ -456,7 +456,7 @@
         const u = Math.min(1, (this.t - st) / 1.0);
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
         ctx.globalAlpha = u;
-        G.text(ctx, 'GAME OVER', W / 2, 70, { align: 'center', scale: 3, color: '#8a1020', shadow: '#2a0008' });
+        G.text(ctx, G.GAMEOVER_TITLE || 'GAME OVER', W / 2, 70, { align: 'center', scale: 3, color: '#8a1020', shadow: '#2a0008' });
         G.wrap(text, 320).forEach((ln, k) => G.text(ctx, ln, W / 2, 114 + k * 12, { align: 'center', color: '#a89aa8', shadow: '#000' }));
         ctx.globalAlpha = 1;
         if (this.t > (scare ? 2.2 : 1.4)) menu.draw(ctx, W / 2, 160, this.t);
@@ -524,7 +524,7 @@
     const s = G.loadGame();
     if (!s) return;
     UI.stack = [];
-    G.fadeTo(() => { G.restore(s); G.Chase.active = null; G.EV.clear(); const ex = new G.Explore(); ex.start(G.S.map, G.S.x, G.S.y, G.S.dir); return ex; }, 1.5);
+    G.fadeTo(() => { G.restore(s); G.Chase.active = null; G.Chase.walkers = []; G.EV.clear(); G.lastLoadTime = G.S.time; const ex = new G.Explore(); ex.start(G.S.map, G.S.x, G.S.y, G.S.dir); return ex; }, 1.5);
   };
   G.retry = function () {
     const s = G.checkpointData || G.loadGame();
@@ -533,7 +533,8 @@
       const deaths = G.S.deaths, time = G.S.time;
       G.restore(s);
       G.S.deaths = deaths; G.S.time = time;
-      G.Chase.active = null; G.EV.clear();
+      G.Chase.active = null; G.Chase.walkers = []; G.EV.clear();
+      G.lastLoadTime = G.S.time;
       const ex = new G.Explore();
       ex.start(G.S.map, G.S.x, G.S.y, G.S.dir);
       return ex;

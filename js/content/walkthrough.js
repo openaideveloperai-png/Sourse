@@ -2,7 +2,8 @@
 (function (G) {
   'use strict';
   G.WALKTHROUGH = {
-    main: [
+    enginetest: [
+      { start: { map: 'hall', x: 2, y: 4 } },
       { door: 'door_bed' },
       { use: 'desk' },
       { expect: { has: ['brass_key'] } },
