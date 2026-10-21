@@ -76,9 +76,18 @@
     return (CACHE[name] = { frames: fr, fps: d.fps });
   };
   // draw sprite frame by time; x,y = anchor point
+  // portraits: G.PORTRAITS[name] = (expr) => 42x42 canvas; give the function an `exprs` array
+  G.PORTRAITS = G.PORTRAITS || {};
+  // missing art is drawn as a labelled magenta box so it is easy to spot (and listed in G.missingArt)
+  G.missingArt = {};
+  G.drawMissing = function (ctx, name, x, y, label) {
+    if (!G.missingArt[name]) { G.missingArt[name] = true; if (window.console) console.warn('missing art: ' + name); }
+    ctx.fillStyle = 'rgba(255,0,200,0.55)'; ctx.fillRect(Math.round(x - 7), Math.round(y - 14), 14, 14);
+    G.text(ctx, String(label || name).slice(0, 4), Math.round(x), Math.round(y - 11), { align: 'center', color: '#ffffff' });
+  };
   G.drawSprite = function (ctx, name, x, y, t, flip, alpha) {
     const s = G.getSprite(name);
-    if (!s) return;
+    if (!s) { if (name) G.drawMissing(ctx, name, x, y); return; }
     const f = s.frames.length > 1 ? s.frames[Math.floor((t || 0) * s.fps) % s.frames.length] : s.frames[0];
     G.drawFrame(ctx, f, x, y, flip, alpha);
   };
@@ -98,7 +107,7 @@
   // draw a character facing dir; moving -> walk cycle
   G.drawChar = function (ctx, name, x, y, dir, walkT, alpha) {
     const ch = G.getChar(name);
-    if (!ch) return;
+    if (!ch) { if (name) G.drawMissing(ctx, 'char:' + name, x, y, name); return; }
     const seq = [0, 1, 0, 2];
     const f = walkT === null || walkT === undefined ? 0 : seq[Math.floor(walkT * 8) % 4];
     let arr = ch[dir];

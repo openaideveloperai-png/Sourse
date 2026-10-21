@@ -10,6 +10,9 @@
 <script src="../js/art_kid.js"></script>
 <script src="../js/art/chars_main.js"></script>
 <script src="../js/art/caretaker.js"></script>
+<script src="../js/art/cast.js"></script>
+<script src="../js/art/danchi.js"></script>
+<script src="../js/art/props.js"></script>
 <script src="../js/engine/world.js"></script>
 <script src="../js/engine/events.js"></script>
 <script>
@@ -34,8 +37,16 @@ window.addEventListener('load', () => {
   if (G.KID && G.KID.build) G.KID.build();
   if (G.GAME && G.GAME.boot) try { G.GAME.boot(); } catch (e) {}
   const groups = [];
+  // ?portraits=1 shows every portrait in G.PORTRAITS with all its expressions
+  if (q.get('portraits')) {
+    for (const n of Object.keys(G.PORTRAITS)) if (match(n)) {
+      const fn = G.PORTRAITS[n];
+      const ex = fn.exprs || ['neutral'];
+      groups.push({ name: n + ' (' + ex.join(' ') + ')', frames: ex.map((e) => { const c = fn(e); return { c: c, w: c.width, h: c.height }; }) });
+    }
+  } else
   for (const n of G.spriteNames()) if (match(n)) groups.push({ name: n, frames: G.getSprite(n).frames });
-  for (const n of G.charNames()) if (match('char:' + n) || match(n)) { const c = G.getChar(n); groups.push({ name: 'char:' + n, frames: [].concat(c.down, c.up, c.left, c.right || []) }); }
+  if (!q.get('portraits')) for (const n of G.charNames()) if (match('char:' + n) || match(n)) { const c = G.getChar(n); groups.push({ name: 'char:' + n, frames: [].concat(c.down, c.up, c.left, c.right || []) }); }
   const cols = +(q.get('cols') || 4);
   const PAD = 6;
   // pack rows of up to `cols` groups

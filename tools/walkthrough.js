@@ -14,6 +14,11 @@
 //   {expect: {map, has:[...], flags:[...], not:[...]}}
 //   {chase: 'end'}             end an active chase (survival is tested separately)
 //   {note: 'text'}             comment
+//   {walkTo: [x, y]}           check a path to tile x,y and stand there (touch triggers fire)
+//   {start: {map, x, y, dir, items, flags, notes}}   (first step only) begin from this state
+//                              instead of New Game, to test one chapter on its own
+// `choose` may be a number or an array (one entry per choice box, in order).
+// A route can also be G.WALKTHROUGH[name] = function () { return [...steps] } to compose routes.
 const { chromium } = require('playwright');
 const path = require('path');
 (async () => {
@@ -26,19 +31,23 @@ const path = require('path');
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
   await p.goto('file://' + path.resolve(__dirname, '../index.html') + '?dev=1');
   await p.waitForTimeout(300);
-  const steps = await p.evaluate((r) => (window.__G.WALKTHROUGH || {})[r] || null, route);
+  const steps = await p.evaluate((r) => { const R = (window.__G.WALKTHROUGH || {})[r]; return typeof R === 'function' ? R() : R || null; }, route);
   if (!steps) { console.log('no route', route); process.exit(1); }
-  // start a new game directly
-  await p.evaluate(() => { const G = window.__G; G.setScene(G.newGame()); });
+  if (steps[0] && steps[0].start) {
+    const r = await p.evaluate((cfg) => { try { window.__G.dev.start(cfg); return 'ok'; } catch (e) { return String(e); } }, steps[0].start);
+    if (r !== 'ok') { console.log('FAIL: start: ' + r); process.exit(1); }
+    steps.shift();
+  } else await p.evaluate(() => { const G = window.__G; G.setScene(G.newGame()); });
+  await p.waitForTimeout(150);
   const settle = async (choose) => {
     // advance dialogue until nothing is running; answer choices with `choose`
-    for (let i = 0; i < 400; i++) {
+    let picks = Array.isArray(choose) ? choose.slice() : choose === undefined ? [] : [choose];
+    for (let i = 0; i < 600; i++) {
       const st = await p.evaluate(() => { const G = window.__G; const top = G.UI.stack[G.UI.stack.length - 1]; return { busy: G.EV.busy, dlg: G.Dialog.active, choice: !!(G.Dialog.choice), ui: G.UI.active, kind: top && top.kind, hidden: G.EX && G.EX.p.hidden, chasing: !!G.Chase.active, scene: G.getScene() && G.getScene().constructor && G.getScene() === G.EX }; });
       if (st.ui && st.kind) return st; // puzzle waiting for an answer
       if (st.choice) {
-        const n = choose === undefined ? 0 : choose;
+        const n = picks.length ? picks.shift() : 0;
         await p.evaluate((n) => { const G = window.__G; G.Dialog.chars = G.Dialog.total; G.Dialog.choice.sel = n; G.press('ok'); }, n);
-        choose = undefined;
         await p.waitForTimeout(40);
         continue;
       }
@@ -59,6 +68,12 @@ const path = require('path');
       const ok = await p.evaluate((id) => { const G = window.__G; if (!G.EX || !G.EX.room.obj(id)) return 'missing object ' + id + ' in ' + G.S.map; if (!G.EX.room.obj(id).visible) return 'object hidden: ' + id; if (!G.dev.reachable(id)) return 'no path to ' + id + ' in ' + G.S.map; G.dev.use(id); return 'ok'; }, id);
       if (ok !== 'ok') { fail = 'step ' + i + ': ' + ok; break; }
       await p.waitForTimeout(80);
+      st = await settle(s.choose);
+    }
+    if (s.walkTo) {
+      const r = await p.evaluate((xy) => window.__G.dev.walkTo(xy[0], xy[1]), s.walkTo);
+      if (r !== 'ok') { fail = 'step ' + i + ': ' + r + ' in ' + (await p.evaluate(() => window.__G.S.map)); break; }
+      await p.waitForTimeout(120);
       st = await settle(s.choose);
     }
     if (s.item) { await p.evaluate((id) => { const G = window.__G; const it = G.ITEMS[id]; if (it && it.use) G.EV.run(it.use); }, s.item); await p.waitForTimeout(60); st = await settle(s.choose); }

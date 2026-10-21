@@ -81,4 +81,9 @@
     }
     x.fillRect(20, 19, 2, 1);
   });
+  G.PLAYER_CHAR = 'haru';
+  G.PORTRAITS.haru = G.haruPortrait;
+  G.PORTRAITS.haru.exprs = ['neutral', 'shock', 'scared', 'annoyed', 'determined', 'pain', 'happy', 'dead', 'sad'];
+  G.PORTRAITS.old_haru = G.oldHaruPortrait;
+  G.PORTRAITS.old_haru.exprs = ['neutral', 'happy', 'sad', 'shock'];
 })(window.G);

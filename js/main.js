@@ -194,7 +194,26 @@
 
   // ---------------- boot ----------------
   if (G.GAME && G.GAME.boot) G.GAME.boot();
-  if (G.DEV && q.get('map')) {
+  // art stage: ?dev=1&stage=1&wall=danchi&floor=tatami&dark=0.2&put=name:x:y:w:h[:wall|floor],char=name:x:y:dir
+  if (G.DEV && q.get('stage')) {
+    const objs = (q.get('put') || '').split(',').filter(Boolean).map((s, i) => {
+      const a = s.split(':');
+      const o = { id: 'p' + i, x: +a[1], y: +a[2], w: +(a[3] || 1), h: +(a[4] || 1) };
+      if (a[0].indexOf('char=') === 0) { o.char = a[0].slice(5); o.dir = a[3] || 'down'; o.w = 1; o.h = 1; }
+      else o.sprite = a[0];
+      if (a[5]) o.z = a[5];
+      return o;
+    });
+    const fl = q.get('floor') || 'tatami';
+    G.MAPS.stage = { name: 'Stage', wall: q.get('wall') || 'danchi', floor: { '.': fl, ',': q.get('floor2') || fl }, dark: +(q.get('dark') || 0), rain: q.get('rain') || null,
+      tiles: ['##########################', 'WWWWWWWWWWWWWWWWWWWWWWWWWW', 'WWWWWWWWWWWWWWWWWWWWWWWWWW'].concat(Array.from({ length: 10 }, (_, r) => (r < 5 ? '.' : ',').repeat(26))).concat([q.get('rail') ? 'RRRRRRRRRRRRRRRRRRRRRRRRRR' : '##########################']),
+      objects: objs, lights: q.get('lights') ? JSON.parse(q.get('lights')) : [] };
+    G.S = G.newState();
+    if (q.get('flashlight')) G.S.flags.playerLight = +q.get('flashlight');
+    const ex = new G.Explore();
+    ex.start('stage', +(q.get('x') || 1), +(q.get('y') || 12), 'up');
+    scene = ex;
+  } else if (G.DEV && q.get('map')) {
     G.S = G.newState();
     for (const it of (q.get('items') || '').split(',').filter(Boolean)) G.S.items.push(it);
     for (const f of (q.get('flags') || '').split(',').filter(Boolean)) G.S.flags[f] = true;
@@ -232,6 +251,28 @@
       for (let c = o.x - 1; c <= o.x + o.w; c++) for (let r = o.y - 1; r <= o.y + o.h; r++) if (!room.isSolid(c, r)) goals.push([c, r]);
       if (o.def.touch || (o.def.door && o.def.door.walk) || !o.solid) goals.push([o.x, o.y]);
       return goals.some(([c, r]) => (c === pc && r === pr) || G.findPath(room, pc, pr, c, r) !== null);
+    },
+    // start a fresh game at a given state: {map, x, y, dir, items:[...], flags:{k:v}|[...], follower}
+    start(cfg) {
+      G.S = G.newState();
+      G.checkpointData = null; G.Chase.active = null; G.Chase.walkers = []; G.EV.clear();
+      for (const it of cfg.items || []) G.S.items.push(it);
+      if (Array.isArray(cfg.flags)) for (const f of cfg.flags) G.S.flags[f] = true;
+      else Object.assign(G.S.flags, cfg.flags || {});
+      for (const n of cfg.notes || []) if (!G.S.notes.includes(n)) G.S.notes.push(n);
+      const ex = new G.Explore();
+      ex.start(cfg.map, cfg.x, cfg.y, cfg.dir || 'down');
+      G.setScene(ex);
+      return ex;
+    },
+    // walk-test: is tile (x, y) reachable from the player? if so, put the player there
+    walkTo(x, y) {
+      const ex = G.EX, room = ex.room, TS = G.TS;
+      const pc = Math.floor(ex.p.x / TS), pr = Math.floor((ex.p.y - 2) / TS);
+      if (room.isSolid(x, y)) return 'tile ' + x + ',' + y + ' is solid';
+      if (!(pc === x && pr === y) && G.findPath(room, pc, pr, x, y) === null) return 'no path to ' + x + ',' + y;
+      ex.p.x = x * TS + 8; ex.p.y = y * TS + 12;
+      return 'ok';
     },
     state() { return { map: G.S.map, items: G.S.items.slice(), flags: Object.keys(G.S.flags).filter((k) => k[0] !== '@'), busy: G.EV.busy, dialog: G.Dialog.active, ui: G.UI.active }; },
   };
