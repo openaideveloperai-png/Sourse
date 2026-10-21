@@ -165,6 +165,7 @@
       { type: 'patrol', skin: 'fire', pts: [[1, 12], [24, 12]], speed: 5, phase: 0.2, r: 4 },
     ],
     extraShards: [[5, 1], [20, 1], [8, 11], [19, 11], [16, 6]],
+    extraMimics: [[13, 11]],
     intro: [
       { who: 'kid', face: 'shock', text: 'Who designs a garden like this?!' },
       { who: 'kid', face: 'neutral', text: 'The spikes go up and down in waves. If I move with the wave...' },
@@ -292,6 +293,7 @@
     if (!L.extraShards) continue;
     L.map = L.map.map((row) => row.split(''));
     for (const [c, r] of L.extraShards) L.map[r][c] = 'o';
+    for (const [c, r] of L.extraMimics || []) L.map[r][c] = 'F';
     L.map = L.map.map((row) => row.join(''));
   }
 

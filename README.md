@@ -62,7 +62,7 @@ node tools/tightness.js      # largest slack each chapter allows (smaller = hard
 ```
 
 At the time of writing, chapters 2, 5 and 6 only allow about 2px of slack, chapters 1, 4 and 7
-about 4px, and chapter 3 is pitch dark.
+about 4px, and chapter 3 is played almost blind in a dark forest.
 
 ## Project layout
 

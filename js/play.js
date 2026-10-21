@@ -7,7 +7,7 @@
   const LIGHTING = {
     meadow: { dark: 0, overlay: 'rgba(255,180,120,0.10)', vig: 0.35 },
     village: { dark: 0, overlay: 'rgba(255,200,140,0.08)', vig: 0.35 },
-    forest: { dark: 0.62, tint: '#04120a', player: 52, vig: 0.6 },
+    forest: { dark: 0.8, tint: '#030c07', player: 54, vig: 0.6 },
     castle: { dark: 0, overlay: 'rgba(255,190,140,0.06)', vig: 0.4 },
     crypt: { dark: 0.9, tint: '#040208', player: 48, vig: 0.7 },
     volcano: { dark: 0.5, tint: '#1a0404', player: 44, vig: 0.55 },
@@ -281,6 +281,9 @@
           } else if (sk === 'wolf') {
             shadow(p.x, p.y + 4, 8);
             list.push({ y: p.y + 6, draw: (ctx, ox, oy) => G.drawFrame(ctx, fr(mf.wolf, 12, k * 0.1), ox + p.x, oy + p.y + 6, flip) });
+            // red eyes and a faint outline glow so wolves can be seen in the dark
+            lights.push({ x: p.x + (flip ? -10 : 10), y: p.y + TOP - 7, r: 9, col: '#ff2020', glow: 0.35, i: 0.15 });
+            lights.push({ x: p.x, y: p.y + TOP, r: 22, i: 0.3 });
           } else if (sk === 'crow') {
             shadow(p.x, p.y + 6, 4);
             list.push({ y: p.y + 6, draw: (ctx, ox, oy) => G.drawFrame(ctx, fr(mf.crow, 12, k * 0.2), ox + p.x, oy + p.y + 2, flip) });
