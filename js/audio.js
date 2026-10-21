@@ -234,6 +234,17 @@
     blip(pitch, wave) { const t = now(); osc(wave || 0.25, pitch || 520, t, 0.035, 0.035, { release: 0.03 }); },
     select() { const t = now(); osc(0.5, 660, t, 0.05, 0.06); osc(0.5, 990, t + 0.04, 0.07, 0.05); },
     rbd() { S.sting(); },
+    keys() { const t = now(); for (let i = 0; i < 6; i++) osc('triangle', 2400 + Math.random() * 1800, t + i * 0.045 + Math.random() * 0.02, 0.06, 0.03); noise(t, 0.3, 0.04, 'highpass', 5000); },
+    latch() { const t = now(); for (let i = 0; i < 4; i++) noise(t + i * 0.05, 0.04, 0.18, 'bandpass', 2800 + i * 300, { q: 5 }); osc('square', 900, t + 0.22, 0.05, 0.05); },
+    ring() { const t = now(); for (let r = 0; r < 2; r++) for (let i = 0; i < 10; i++) { osc('square', 1300, t + r * 0.5 + i * 0.04, 0.03, 0.035); osc('square', 1600, t + r * 0.5 + i * 0.04 + 0.02, 0.02, 0.025); } },
+    meow() { const t = now(); osc('triangle', 700, t, 0.4, 0.06, { slide: 1000, slideT: 0.12, vib: [8, 30] }); osc('triangle', 1000, t + 0.15, 0.3, 0.04, { slide: 600 }); },
+    hiss() { const t = now(); noise(t, 0.7, 0.18, 'highpass', 3500, { attack: 0.05 }); },
+    kettle() { const t = now(); osc('sine', 2200, t, 1.6, 0.05, { vib: [7, 40], attack: 0.4, release: 0.3 }); osc('sine', 2900, t + 0.2, 1.4, 0.03, { vib: [6, 30], attack: 0.4 }); },
+    ding() { const t = now(); osc('sine', 1046, t, 1.2, 0.08, { release: 1.1 }); osc('sine', 784, t + 0.25, 1.4, 0.08, { release: 1.3 }); },
+    thunder() { const t = now(); noise(t, 2.5, 0.5, 'lowpass', 500, { slide: 80, attack: 0.02 }); noise(t + 0.05, 0.3, 0.3, 'lowpass', 2000); },
+    splash() { const t = now(); noise(t, 0.4, 0.2, 'bandpass', 1200, { slide: 400, q: 1 }); },
+    breath() { const t = now(); noise(t, 0.9, 0.06, 'bandpass', 700, { q: 2, attack: 0.4 }); noise(t + 1.0, 0.8, 0.05, 'bandpass', 600, { q: 2, attack: 0.3 }); },
+    static() { const t = now(); noise(t, 0.8, 0.12, 'bandpass', 3000, { q: 0.5 }); },
   });
   A.note = function (freq, kind) {
     if (!A.ready || A.muted) return;

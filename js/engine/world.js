@@ -45,7 +45,7 @@
   }
   G.Room = Room;
   Room.prototype.tileAt = function (c, r) { return c < 0 || r < 0 || c >= this.w || r >= this.h ? ' ' : this.tiles[r][c]; };
-  Room.prototype.tileSolid = function (c, r) { const ch = this.tileAt(c, r); return ch === '#' || ch === 'W' || ch === ' '; };
+  Room.prototype.tileSolid = function (c, r) { const ch = this.tileAt(c, r); return ch === '#' || ch === 'W' || ch === ' ' || ch === 'R'; };
   // recompute visibility + solidity after any state change
   Room.prototype.refresh = function () {
     for (const o of this.objects) o.update();

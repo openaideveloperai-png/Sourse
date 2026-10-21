@@ -115,6 +115,20 @@
   };
   Explore.prototype.useDoor = function* (E, o) {
     const def = o.def, d = def.door;
+    // during a chase, a door with a chain latch can be latched instead of used
+    const ch = G.Chase.active;
+    if (ch && ch.away && def.latch && ch.away.from === d.to) {
+      const k = o.key('latched');
+      if (!G.S.flags[k]) {
+        const i = yield* E.ask('@ Footsteps on the other side. Keys jingling.', ['Latch the chain', 'Go through']);
+        if (i === 0) {
+          G.S.flags[k] = true;
+          G.Chase.latch(def.latchTime || 5);
+          yield* E.say('@ The chain rattles into place.');
+          return;
+        }
+      }
+    }
     const ukey = o.key('unlocked');
     if (def.lock && !G.S.flags[ukey]) {
       let can = false;
@@ -182,6 +196,7 @@
     const def = this.room.def;
     if (def.update) def.update(G.EV.api, dt);
     G.Chase.update(dt);
+    G.Chase.updateWalkers(dt);
     if (G.UI.active) return;
     if (G.EV.busy) { G.EV.update(dt, inp); this.p.moving = false; return; }
     if (inp.menu) { G.UI.openMenu(); return; }
@@ -246,11 +261,28 @@
     G.EV.clear();
     G.Dialog.lines = null;
     G.Chase.active = null;
+    G.Chase.walkers = [];
     G.S.deaths++;
     G.UI.openGameOver(cause, opts);
   };
   Explore.prototype.ending = function (id, done) {
     G.UI.openEnding(id, done);
+  };
+
+  // rain streaks: over railing tiles only ('rail') or the whole screen ('full')
+  Explore.prototype.drawRain = function (ctx, ox, oy, mode) {
+    const room = this.room, t = this.t;
+    ctx.fillStyle = 'rgba(170,190,220,0.35)';
+    const n = mode === 'full' ? 140 : 90;
+    for (let i = 0; i < n; i++) {
+      const sx = (G.hash(i, 1, 9) * W + t * 40) % W;
+      const sy = (G.hash(i, 2, 9) * H + t * (220 + G.hash(i, 3, 9) * 80)) % H;
+      if (mode !== 'full') {
+        const c = Math.floor((sx - ox) / TS), r = Math.floor((sy - oy) / TS);
+        if (room.tileAt(c, r) !== 'R') continue;
+      }
+      ctx.fillRect(Math.round(sx), Math.round(sy), 1, 4);
+    }
   };
 
   // ---------------- drawing ----------------
@@ -313,6 +345,7 @@
       ctx.globalCompositeOperation = 'source-over';
     }
     G.FX.draw(ctx, ox, oy, 1);
+    if (def.rain) this.drawRain(ctx, ox, oy, def.rain);
     if (def.overlay) { ctx.fillStyle = def.overlay; ctx.fillRect(0, 0, W, H); }
     if (this.tint) { ctx.globalAlpha = this.tint.alpha; ctx.fillStyle = this.tint.color; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     // chase: red pulse at the edges

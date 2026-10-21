@@ -156,6 +156,76 @@
     for (let i = 0; i < 8; i++) { const x = X + rnd.int(16), y = Y + 1 + rnd.int(15); px.set(x, y, C('#1c321f')); px.set(x, y - 1, C('#4a6e40')); }
   };
   FLOORS.void = (px, X, Y) => { px.rect(X, Y, TS, TS, C('#000000')); };
+  // tatami: 16x32 mats with dark cloth borders, alternating direction
+  FLOORS.tatami = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y;
+        const blockX = Math.floor(gx / 32), blockY = Math.floor(gy / 32);
+        const vert = (blockX + blockY) % 2 === 0;
+        const lx = vert ? gx % 16 : gx % 32, ly = vert ? gy % 32 : gy % 16;
+        const mw = vert ? 16 : 32, mh = vert ? 32 : 16;
+        let c = (vert ? gx : gy) % 2 === 0 ? C('#a8a46a') : C('#9c985e');
+        if (G.hash(gx, gy, 3) < 0.04) c = C('#b4b07a');
+        if (lx === 0 || lx === mw - 1 || ly === 0 || ly === mh - 1) c = C('#3a3a2a');
+        else if ((vert ? (lx === 1 || lx === mw - 2) : (ly === 1 || ly === mh - 2))) c = C('#5a4a34');
+        px.set(X + x, Y + y, c);
+      }
+  };
+  // wet concrete of an open-air corridor
+  FLOORS.corridor = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y;
+        const n = G.vnoise(gx / 9, gy / 7, 101), h = hash(gx, gy, 102);
+        let c = n > 0.62 ? C('#5a5e66') : n < 0.3 ? C('#44484e') : C('#4e525a');
+        if (h < 0.05) c = C('#3a3d42');
+        // puddles with a cold reflection
+        const pn = G.vnoise(gx / 14, gy / 10, 103);
+        if (pn > 0.72) c = (gx + gy * 2) % 9 === 0 ? C('#7a8aa0') : C('#384050');
+        if (gx % 48 === 0) c = C('#383b40');
+        px.set(X + x, Y + y, c);
+      }
+  };
+  FLOORS.terrazzo = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y, h = hash(gx, gy, 111);
+        let c = C('#8a8478');
+        if (h < 0.08) c = C('#5e5a52'); else if (h < 0.14) c = C('#a8a294'); else if (h < 0.17) c = C('#6e4a3a');
+        if (gx % 32 === 0 || gy % 32 === 0) c = C('#6a665c');
+        px.set(X + x, Y + y, c);
+      }
+  };
+  FLOORS.genkan = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y;
+        let c = hash(Math.floor(gx / 8), Math.floor(gy / 8), 121) < 0.5 ? C('#4a4844') : C('#54524c');
+        if (gx % 8 === 7 || gy % 8 === 7) c = C('#2e2c2a');
+        px.set(X + x, Y + y, c);
+      }
+  };
+  FLOORS.basement = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y;
+        const n = G.vnoise(gx / 6, gy / 6, 131), h = hash(gx, gy, 132);
+        let c = n > 0.6 ? C('#3e3e3a') : n < 0.3 ? C('#2a2a28') : C('#343430');
+        if (h < 0.04) c = C('#4e4e48');
+        if (G.vnoise(gx / 11, gy / 8, 133) > 0.75) c = C('#22262a');
+        px.set(X + x, Y + y, c);
+      }
+  };
+  FLOORS.linoleum = (px, X, Y, wx, wy) => {
+    for (let y = 0; y < TS; y++)
+      for (let x = 0; x < TS; x++) {
+        const gx = wx + x, gy = wy + y;
+        let c = (Math.floor(gx / 8) + Math.floor(gy / 8)) % 2 ? C('#b8b0a0') : C('#a8a090');
+        if (hash(gx, gy, 141) < 0.03) c = C('#8a8274');
+        px.set(X + x, Y + y, c);
+      }
+  };
 
   // ---------------- walls ----------------
   // pattern(px, X, Y, wx, y) paints the wallpaper; wainscot: height of lower panel (px, 0 = none)
@@ -234,6 +304,23 @@
     },
     wainscot: 0, base: C('#1e1c22'),
   };
+  WALLS.concrete = {
+    paper(px, X, Y, wx, wy, h) {
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < TS; x++) {
+          const gx = wx + x, gy = wy + y;
+          const n = G.vnoise(gx / 5, gy / 9, 151);
+          let c = n > 0.62 ? C('#7a7c80') : n < 0.3 ? C('#5e6064') : C('#6c6e72');
+          if (gx % 64 === 0) c = C('#4a4c50');
+          // rain stains running down
+          if (G.vnoise(gx / 2.5, 0.5, 152) > 0.72 && G.hash(gx, Math.floor(gy / 3), 153) < 0.8) c = G.darken(c, 0.2);
+          px.set(X + x, Y + y, c);
+        }
+    },
+    wainscot: 0, base: C('#3a3c40'),
+  };
+  WALLS.plaster = wallpaper(C('#b4a68a'), C('#a4967a'), C('#c4b69a'), { wainscot: 0, baseboard: C('#5a4632'), grime: true });
+  WALLS.danchi = wallpaper(C('#a8a490'), C('#989480'), C('#b8b4a0'), { wainscot: 10, panel: [C('#6a6e66'), C('#565a54'), C('#7e827a')], baseboard: C('#3a3c38'), grime: true });
   WALLS.tiles = {
     paper(px, X, Y, wx, wy, h) {
       for (let y = 0; y < h; y++)
@@ -254,7 +341,7 @@
     const px = new G.PX(W, H);
     const at = (c, r) => (c < 0 || r < 0 || c >= map.w || r >= map.h ? ' ' : map.tiles[r][c]);
     const isWall = (ch) => ch === 'W';
-    const isCeil = (ch) => ch === '#' || ch === ' ';
+    const isCeil = (ch) => ch === '#' || ch === ' ' || ch === 'R';
     const isFloor = (ch) => !isWall(ch) && !isCeil(ch);
     const ceil = C(map.ceiling || '#120d16');
     const ceilRim = G.lighten(ceil, 0.12);
@@ -264,6 +351,22 @@
         const ch = at(c, r);
         const X = c * TS, Y = r * TS;
         if (ch === ' ') { px.rect(X, Y, TS, TS, C('#000000')); continue; }
+        if (ch === 'R') {
+          // outside beyond the railing: dark sky, distant lit windows, then the parapet
+          for (let y = 0; y < TS; y++)
+            for (let x = 0; x < TS; x++) {
+              const gx = X + x, gy = Y + y;
+              let col = C('#0a0e18');
+              if (y < 9 && G.hash(Math.floor(gx / 6), Math.floor(gy / 5), 160) < 0.04 && (gx % 6) < 3 && (gy % 5) < 2) col = C('#c8a860');
+              if (y >= 9) col = y === 9 ? C('#8a8c90') : y < 12 ? C('#6c6e72') : C('#4a4c50');
+              px.set(gx, gy, col);
+            }
+          // metal rail with posts
+          px.hline(X, X + 15, Y + 3, C('#5a5e66'));
+          px.hline(X, X + 15, Y + 4, C('#33363c'));
+          px.vline(X + 7, Y + 4, Y + 8, C('#44484e'));
+          continue;
+        }
         if (ch === '#') {
           px.rect(X, Y, TS, TS, ceil);
           // rim where the ceiling meets something visible

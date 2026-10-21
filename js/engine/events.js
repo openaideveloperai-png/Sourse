@@ -82,6 +82,15 @@
         G.Audio.sfx('item');
         yield* E.say('@ Obtained ' + (it ? it.name : id) + '.');
       }
+      // automatic combinations: G.RECIPES = [{needs: [...], gives: 'id', text: '...'}]
+      for (const rc of G.RECIPES || []) {
+        if (G.S.items.includes(rc.gives) || G.S.flags['@made:' + rc.gives]) continue;
+        if (!rc.needs.every((n) => G.S.items.includes(n))) continue;
+        for (const n of rc.needs) E.take(n);
+        G.S.flags['@made:' + rc.gives] = true;
+        yield* E.say(rc.text || '@ The pieces fit together.');
+        yield* E.give(rc.gives);
+      }
     },
     take(id) { const i = G.S.items.indexOf(id); if (i >= 0) G.S.items.splice(i, 1); },
     hide(id) { const o = E.obj(id); if (o) { G.S.flags[o.key('hidden')] = true; delete G.S.flags[o.key('shown')]; ex().room.refresh(); } },
@@ -235,6 +244,9 @@
 
     // ---------- danger ----------
     chase(cfg) { G.Chase.start(cfg); },
+    walker(cfg) { G.Chase.walker(cfg); },
+    ambushReady: (chance, cooldown) => G.Chase.ambushReady(chance, cooldown),
+    notesCount: (prefix) => G.S.notes.filter((n) => n.startsWith(prefix)).length,
     endChase(silent) { G.Chase.stop(silent); },
     *die(cause, opts) { ex().gameOver(cause, opts || {}); for (;;) yield; },
     checkpoint() { ex().checkpoint(); },

@@ -101,3 +101,20 @@
     scenes: {},
   };
 })(window.G);
+(function (G) {
+  G.MAPS.tiletest = {
+    name: 'Tile test', wall: 'danchi', floor: { '.': 'corridor', ',': 'tatami', ':': 'terrazzo', ';': 'genkan', '_': 'basement', '-': 'linoleum' }, rain: 'rail', dark: 0.3,
+    tiles: [
+      '##########################',
+      'WWWWWWWWWWWWWWWWWWWWWWWWWW',
+      'WWWWWWWWWWWWWWWWWWWWWWWWWW',
+      '..........................',
+      '..........................',
+      ',,,,,,::::::;;;;;;______--',
+      ',,,,,,::::::;;;;;;______--',
+      ',,,,,,::::::;;;;;;______--',
+      'RRRRRRRRRRRRRRRRRRRRRRRRRR',
+    ],
+    objects: [],
+  };
+})(window.G);

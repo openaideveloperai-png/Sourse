@@ -177,3 +177,21 @@ Look at the result before moving on.
 - `E.set('@playerChar', 'name')`: change the player's sprite set.
 - `E.goal('Find a way into the study.')`: the protagonist's current objective, shown in the pause menu. Update it at every major step so returning players are never lost.
 - `yield* E.flicker(times, endDark)`: lights flicker (darkness spikes) with a click sound.
+
+## Chase extras
+
+- `timer: 15` in a chase config: after 15 s the chase ends the next time the player changes rooms (keys jingle away). This is the default way chases should end; combine with hiding (`loseAfterHide`).
+- Doors with `latch: true` (apartment doors): during a chase, when the Caretaker is following through that door, pressing Z on it offers to latch the chain, adding `latchTime` (default 5) seconds before he gets through. Once per door per chase.
+- `E.walker({char, path: [[x, y], ...], speed, delay, cause, onEnd})`: a figure walks a fixed path through the room; touching it is death. For walk-by scares.
+- `E.ambushReady(chance, cooldownSeconds)`: true at most once per cooldown (and never right after a chase); use it in `enter` to ration random walk-bys.
+- `G.RECIPES.push({needs: ['a', 'b'], gives: 'c', text: '@ They fit together.'})`: items combine automatically when the last piece is picked up.
+- `E.notesCount('letter_')`: how many notes with that id prefix the player has read/found.
+- New sounds: keys, latch, ring, meow, hiss, kettle, ding, thunder, splash, breath, static, knock, whisper, glass, drip, clock, bell, laugh.
+
+## Danchi tiles
+
+Floors: `tatami`, `corridor` (wet concrete with puddles), `terrazzo` (lobby), `genkan` (dark entry
+stone), `basement`, `linoleum`. Walls: `concrete`, `plaster`, `danchi` (painted plaster over a
+grey dado). Tile `R` = outdoor railing with the night city beyond (solid); put a row of `R` along
+the open side of an outdoor corridor and set `rain: 'rail'` on the map to animate rain beyond it.
+`rain: 'full'` rains over the whole screen (courtyard, roof).
