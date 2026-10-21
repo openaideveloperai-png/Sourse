@@ -13,7 +13,7 @@
       { use: 'piano' }, { answer: ['E', 'D', 'C', 'D', 'E', 'E', 'E'] },
       { expect: { flags: ['pianoDone'] } },
       { use: 'safe' }, { answer: '1987' },
-      { chase: 'end' },
+      { escape: ['exit', 'door_bed', { hide: 'ward' }] },
       { expect: { flags: ['safeOpen'] } },
     ],
   };

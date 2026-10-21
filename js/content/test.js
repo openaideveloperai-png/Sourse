@@ -87,7 +87,7 @@
       { id: 'safe', x: 10, y: 3, sprite: 'safe', on: function* (E) {
         if (E.flag('safeOpen')) { yield* E.say('@ Empty.'); return; }
         const c = yield* E.code({ len: 4, title: 'Safe' });
-        if (c === '1987') { E.set('safeOpen'); E.sfx('unlock'); yield* E.say('@ The safe opens. Inside: nothing but a lock of hair.', '@ Then the lights go out.'); E.dark(0.9); E.chase({ char: 'shade', speed: 56, at: [1, 6], follow: true, cause: 'monster' }); }
+        if (c === '1987') { E.set('safeOpen'); E.sfx('unlock'); yield* E.say('@ The safe opens. Inside: nothing but a lock of hair.', '@ Then the lights go out.'); E.dark(0.9); E.chase({ char: 'shade', speed: 54, at: [1, 3], delay: 1, follow: true, cause: 'monster', timer: 8 }); }
         else if (c !== null) { E.sfx('locked'); yield* E.say('@ Wrong.'); }
       } },
       { id: 'fire', x: 4, y: 3, w: 2, sprite: 'fireplace', light: { r: 60, col: '#ff8a3a', flicker: true } },

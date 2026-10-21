@@ -30,7 +30,13 @@
   window.addEventListener('keyup', (e) => { const k = KEYMAP[e.code]; if (k) held[k] = false; });
   window.addEventListener('blur', () => { for (const k in held) held[k] = false; });
   G.held = held;
-  G.press = (k) => { pressed[k] = true; }; // used by tests
+  // used by tests: while the loop is paused (deterministic tests), a press runs one frame at once
+  G.press = (k) => {
+    if (G.dev && G.dev.paused) {
+      const d = { ok: { ok: true }, back: { back: true, menu: true }, up: { up: true, my: -1 }, down: { down: true, my: 1 }, left: { left: true, mx: -1 }, right: { right: true, mx: 1 } }[k] || {};
+      G.dev.step(1, Object.assign({ anyPress: true, anyDir: !!(d.up || d.down || d.left || d.right) }, d));
+    } else pressed[k] = true;
+  };
 
   function bindTouch() {
     const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -180,6 +186,7 @@
     while (acc >= STEP && n < 6) {
       acc -= STEP;
       n++;
+      if (G.dev && G.dev.paused) continue;
       const inp = readInput();
       pressed = {};
       update(STEP, inp);
@@ -273,6 +280,138 @@
       if (!(pc === x && pr === y) && G.findPath(room, pc, pr, x, y) === null) return 'no path to ' + x + ',' + y;
       ex.p.x = x * TS + 8; ex.p.y = y * TS + 12;
       return 'ok';
+    },
+    // ---- deterministic stepping (the real-time loop is paused while a bot drives) ----
+    paused: false,
+    step(n, inp) {
+      const base = { mx: 0, my: 0, run: false, ok: false, back: false, menu: false, up: false, down: false, left: false, right: false, anyDir: false, anyPress: false };
+      for (let i = 0; i < n; i++) update(STEP, Object.assign({}, base, inp || {}));
+    },
+    // ---- chase-escape bot ----
+    // Walks (never runs) through a route of targets while a chase is on and reports if it survived.
+    // targets: ['doorId', {hide: 'objId'}, {tile: [x, y]}, {wait: s}, ...]; each door target must be
+    // in the room the bot is in when it gets to it. opts: {latch: true} latches chain doors when asked,
+    // {max: seconds} time limit, {until: 'chaseEnd'|'route'}.
+    escape(targets, opts) {
+      opts = opts || {};
+      const TS = G.TS, q = targets.slice();
+      const out = { ok: false, t: 0, log: [] };
+      const say = (m) => out.log.push(Math.round(out.t * 10) / 10 + 's ' + G.S.map + ': ' + m);
+      this.paused = true;
+      let cur = null, curMap = null, path = null, waitT = 0, stuck = 0, lastPos = null;
+      const max = (opts.max || 90) * 60;
+      try {
+        for (let f = 0; f < max; f++) {
+          out.t = f / 60;
+          const top = G.UI.stack[G.UI.stack.length - 1];
+          if (G.UI.active) {
+            if (top && top.gameover) { say('caught / game over'); out.caught = true; return out; }
+            this.step(1, { ok: true, anyPress: true }); continue;
+          }
+          if (G.Dialog.active) {
+            G.Dialog.chars = G.Dialog.total;
+            if (G.Dialog.choice) {
+              const opt = G.Dialog.choice.options.map(String);
+              let pick = 0;
+              const li = opt.findIndex((o) => /latch/i.test(o));
+              if (li >= 0) pick = opts.latch ? li : opt.findIndex((o) => !/latch/i.test(o));
+              const yi = opt.findIndex((o) => /^yes|hide/i.test(o));
+              if (li < 0 && yi >= 0) pick = yi;
+              G.Dialog.choice.sel = Math.max(0, pick);
+              if (G.Dialog.choice !== this._lastChoice) say('choice: ' + opt[G.Dialog.choice.sel]);
+              this._lastChoice = G.Dialog.choice;
+            }
+            this.step(1, { ok: true, anyPress: true });
+            continue;
+          }
+          if (G.EV.busy && !G.EX.p.hidden) { this.step(1); continue; }
+          const ex = G.EX, room = ex.room, p = ex.p;
+          if (!G.Chase.active && (opts.until !== 'route' || !q.length && !cur)) { if (p.hidden) { this.step(1, { ok: true, anyPress: true }); continue; } out.ok = true; say('chase over'); return out; }
+          if (p.hidden) { this.step(1); continue; }
+          if (!cur) {
+            if (!q.length) { this.step(1); continue; }
+            cur = q.shift(); curMap = G.S.map; path = null;
+            say('target ' + JSON.stringify(cur));
+            if (cur.wait) waitT = cur.wait * 60;
+          }
+          if (cur.wait) { if (--waitT <= 0) cur = null; this.step(1); continue; }
+          if (G.S.map !== curMap && typeof cur === 'string') { cur = null; continue; }
+          const id = typeof cur === 'string' ? cur : cur.hide;
+          let goal, face = null;
+          if (cur.tile) goal = cur.tile;
+          else {
+            const o = room.obj(id);
+            if (!o) { say('missing ' + id); out.err = 'missing ' + id + ' in ' + G.S.map; return out; }
+            const walk = o.def.door && o.def.door.walk;
+            const cands = [];
+            if (walk || !o.solid) for (let c = o.x; c < o.x + o.w; c++) for (let r = o.y; r < o.y + o.h; r++) cands.push([c, r, null]);
+            for (let c = o.x; c < o.x + o.w; c++) { cands.push([c, o.y + o.h, 'up']); cands.push([c, o.y - 1, 'down']); }
+            for (let r = o.y; r < o.y + o.h; r++) { cands.push([o.x - 1, r, 'right']); cands.push([o.x + o.w, r, 'left']); }
+            const pc = Math.floor(p.x / TS), pr = Math.floor((p.y - 2) / TS);
+            let best = null;
+            for (const [c, r, d] of cands) {
+              if (room.isSolid(c, r) && !(walk && c >= o.x && c < o.x + o.w && r >= o.y && r < o.y + o.h)) continue;
+              const pa = c === pc && r === pr ? [] : G.findPath(room, pc, pr, c, r);
+              if (pa && (!best || pa.length < best.pa.length)) best = { pa: pa, c: c, r: r, d: d };
+            }
+            if (!best) { say('no path to ' + id); out.err = 'no path to ' + id; return out; }
+            goal = [best.c, best.r]; face = best.d;
+          }
+          const pc = Math.floor(p.x / TS), pr = Math.floor((p.y - 2) / TS);
+          if (!path || f % 12 === 0) path = pc === goal[0] && pr === goal[1] ? [] : G.findPath(room, pc, pr, goal[0], goal[1]) || [];
+          while (path.length && path[0][0] === pc && path[0][1] === pr && Math.abs(p.x - (pc * TS + 8)) < 3 && Math.abs(p.y - (pr * TS + 12)) < 3) path.shift();
+          const tgt = path.length ? path[0] : goal;
+          const tx = tgt[0] * TS + 8, ty = tgt[1] * TS + 12;
+          let mx = 0, my = 0;
+          const dx = tx - p.x, dy = ty - p.y;
+          if (Math.abs(dx) > 1.5) mx = Math.sign(dx); else if (Math.abs(dy) > 1.5) my = Math.sign(dy);
+          if (!mx && !my && pc === goal[0] && pr === goal[1]) {
+            if (cur.tile) { cur = null; continue; }
+            if (face) {
+              const fd = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[face];
+              if (typeof cur === 'string') { this.step(1, { mx: fd[0], my: fd[1] }); this.step(1, { mx: fd[0], my: fd[1], ok: true, anyPress: true }); }
+              else { p.dir = face; this.step(1, { ok: true, anyPress: true }); cur = null; }
+              continue;
+            }
+          }
+          const key = Math.round(p.x) + ',' + Math.round(p.y);
+          stuck = key === lastPos ? stuck + 1 : 0; lastPos = key;
+          if (stuck > 90) { say('stuck at ' + pc + ',' + pr); out.err = 'stuck'; return out; }
+          this.step(1, { mx: mx, my: my });
+        }
+        say('time limit'); out.err = 'time limit';
+        return out;
+      } finally { this.paused = false; }
+    },
+    // run frames until nothing is happening: advances dialogue, answers choices with `picks`
+    // (array of option indices, used in order, default 0), closes notes/pictures.
+    // Returns {puzzle: kind} if a puzzle screen waits for an answer, {gameover: true}, or {idle: true}.
+    settle(picks, maxFrames) {
+      picks = picks === undefined || picks === null ? [] : [].concat(picks);
+      const was = this.paused;
+      this.paused = true;
+      try {
+        for (let f = 0; f < (maxFrames || 60 * 120); f++) {
+          const top = G.UI.stack[G.UI.stack.length - 1];
+          if (G.UI.active && top) {
+            if (top.gameover) return { gameover: true, frames: f };
+            if (top.kind) return { puzzle: top.kind, frames: f };
+            this.step(1, { ok: true, anyPress: true });
+            continue;
+          }
+          if (G.Dialog.active) {
+            G.Dialog.chars = G.Dialog.total;
+            if (G.Dialog.choice) G.Dialog.choice.sel = picks.length ? picks.shift() : 0;
+            this.step(1, { ok: true, anyPress: true });
+            continue;
+          }
+          if (G.EV.busy || (G.EX && G.EX.fade > 0 && G.EX.fadeDir)) { this.step(1); continue; }
+          // a scene fade (title, endings) also counts as busy
+          this.step(1);
+          if (!G.EV.busy && !G.Dialog.active && !G.UI.active) return { idle: true, frames: f };
+        }
+        return { stuck: true };
+      } finally { this.paused = was; }
     },
     state() { return { map: G.S.map, items: G.S.items.slice(), flags: Object.keys(G.S.flags).filter((k) => k[0] !== '@'), busy: G.EV.busy, dialog: G.Dialog.active, ui: G.UI.active }; },
   };

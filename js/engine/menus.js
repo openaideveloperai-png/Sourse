@@ -429,6 +429,7 @@
     if (scare) { G.Audio.sfx('scare'); G.Shake.add(7, 0.6); } else G.Audio.sfx('death');
     UI.stack = [];
     UI.push({
+      gameover: true,
       t: 0,
       update(dt, inp) {
         this.t += dt;
