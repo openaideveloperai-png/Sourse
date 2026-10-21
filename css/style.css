@@ -1,0 +1,16 @@
+:root { --bg: #07040c; --fg: #e8e2d6; --accent: #c890ff; color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden; touch-action: none; }
+#wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 10px; }
+#game { display: block; image-rendering: pixelated; image-rendering: crisp-edges; background: #000; outline: none; }
+#touch { display: none; width: 100%; max-width: 640px; justify-content: space-between; align-items: center; padding: 0 max(16px, env(safe-area-inset-left, 0px)) 0 max(16px, env(safe-area-inset-right, 0px)); box-sizing: border-box; user-select: none; -webkit-user-select: none; }
+body.touch #touch { display: flex; }
+#dpad { position: relative; width: 150px; height: 150px; border-radius: 50%; background: #1a1424; border: 2px solid #3a2f4d; }
+#dpad span { position: absolute; width: 0; height: 0; border: 14px solid transparent; }
+#dpad .u { left: 61px; top: 10px; border-bottom-color: #8a7aa8; }
+#dpad .d { left: 61px; bottom: 10px; border-top-color: #8a7aa8; }
+#dpad .l { top: 61px; left: 10px; border-right-color: #8a7aa8; }
+#dpad .r { top: 61px; right: 10px; border-left-color: #8a7aa8; }
+#btns { display: flex; gap: 14px; align-items: center; }
+#btns button { width: 72px; height: 72px; border-radius: 50%; border: 2px solid #5a3a8a; background: #2a1640; color: #e8d8ff; font: bold 22px monospace; touch-action: none; }
+#btns #btnP { width: 48px; height: 48px; font-size: 14px; background: #1a1424; border-color: #3a2f4d; }
+@media (orientation: landscape) { body.touch #wrap { flex-direction: row; } body.touch #touch { position: fixed; bottom: 8px; left: 0; right: 0; max-width: none; pointer-events: none; } body.touch #touch > * { pointer-events: auto; opacity: 0.7; } }

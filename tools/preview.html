@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Sprite preview</title>
+<style>body{background:#3a3a44;margin:0;color:#fff;font:12px monospace}canvas{image-rendering:pixelated;display:block}</style>
+</head><body>
+<canvas id="c"></canvas>
+<script src="../js/core.js"></script>
+<script src="../js/art_kid.js"></script>
+<script src="../js/art_world.js"></script>
+<script src="../js/art_mobs.js"></script>
+<script>
+// Lays out every frame group registered in PREVIEW at a big integer scale.
+const params = new URLSearchParams(location.search);
+const SCALE = +(params.get('s') || 6);
+const want = params.get('only');
+function groups() {
+  const out = [];
+  if (G.KID && G.KID.build) { G.KID.build(); for (const k of Object.keys(G.KID)) if (Array.isArray(G.KID[k])) out.push({ name: 'kid.' + k, frames: G.KID[k] }); }
+  if (G.PREVIEW) for (const g of G.PREVIEW()) out.push(g);
+  return want ? out.filter(g => g.name.startsWith(want)) : out;
+}
+const gs = groups();
+let W = 0, H = 0;
+const rows = gs.map(g => { const w = g.frames.reduce((s, f) => s + (f.w + 4), 0); const h = g.frames.reduce((m, f) => Math.max(m, f.h), 0); W = Math.max(W, w); return { g, w, h }; });
+H = rows.reduce((s, r) => s + r.h + 10, 0);
+const cv = document.getElementById('c');
+cv.width = (W + 4) * SCALE + 160; cv.height = H * SCALE + 20;
+const ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+ctx.fillStyle = params.get('bg') || '#5b6b52'; ctx.fillRect(0, 0, cv.width, cv.height);
+let y = 4;
+for (const r of rows) {
+  ctx.fillStyle = '#fff'; ctx.fillText(r.g.name, 4, y * SCALE + 12);
+  let x = 0;
+  for (const f of r.g.frames) {
+    ctx.fillStyle = 'rgba(0,0,0,0.12)'; ctx.fillRect(160 + x * SCALE, y * SCALE, f.w * SCALE, f.h * SCALE);
+    ctx.drawImage(f.c, 160 + x * SCALE, y * SCALE, f.w * SCALE, f.h * SCALE);
+    x += f.w + 4;
+  }
+  y += r.h + 10;
+}
+document.title = 'ready';
+</script></body></html>
