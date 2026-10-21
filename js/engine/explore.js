@@ -46,6 +46,7 @@
     if (def.location) this.banner = { text: def.location, t: 0, small: true };
   };
   Explore.prototype.start = function (map, x, y, dir) {
+    [x, y, dir] = G.resolveEntry(map, x, y, dir);
     this.load(map, x, y, dir);
     this.fade = 1;
     const self = this;
@@ -60,8 +61,18 @@
     if (first && def.first) G.EV.run(def.first);
     if (def.enter) G.EV.run(def.enter);
   };
+  // named entry points: G.MAPS[id].entries = {name: [x, y, dir]}; doors and E.goto may give a
+  // name instead of coordinates, so rooms written by different authors connect by name
+  G.resolveEntry = function (map, x, y, dir) {
+    if (typeof x !== 'string') return [x, y, dir];
+    const def = G.MAPS[map];
+    const e = def && def.entries && def.entries[x];
+    if (!e) throw new Error('Unknown entry "' + x + '" in map ' + map);
+    return [e[0], e[1], e[2] || dir];
+  };
   Explore.prototype.transfer = function* (map, x, y, dir, opts) {
     opts = opts || {};
+    [x, y, dir] = G.resolveEntry(map, x, y, dir);
     const from = G.S.map;
     if (opts.sfx !== null) G.Audio.sfx(opts.sfx || 'door');
     yield* this.fadeTo(1, opts.fade === undefined ? 0.22 : opts.fade);
@@ -152,7 +163,7 @@
       G.S.flags[ukey] = true;
     }
     if (def.before) { const r = yield* def.before(E, o); if (r === false) return; }
-    yield* E.goto(d.to, d.x, d.y, d.dir || this.p.dir, { sfx: def.sfx === undefined ? (def.stairs ? 'stairs' : 'door') : def.sfx });
+    yield* E.goto(d.to, d.entry || d.x, d.y, d.dir || this.p.dir, { sfx: def.sfx === undefined ? (def.stairs ? 'stairs' : 'door') : def.sfx });
   };
   Explore.prototype.tryHide = function* (E, o) {
     const ok = yield* E.yesno(o.def.hidePrompt || '@ Hide inside?');

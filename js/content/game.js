@@ -265,6 +265,8 @@
       c.fillRect(Math.round(rx), Math.round(ry), 1, 5);
     }
     G.vignette(c, 0.7);
+    // a dark band behind the menu
+    for (let y = 136; y < 206; y++) { const k = 1 - Math.abs(y - 171) / 35; c.fillStyle = 'rgba(4,2,8,' + (0.75 * Math.min(1, k * 1.6)).toFixed(3) + ')'; c.fillRect(0, y, W, 1); }
     // title
     G.text(c, 'NOBODY HOME', W / 2 + 1, 25, { align: 'center', scale: 3, color: '#3a0a14' });
     G.text(c, 'NOBODY HOME', W / 2, 24, { align: 'center', scale: 3, color: '#d8d0dc' });

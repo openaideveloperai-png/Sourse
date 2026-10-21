@@ -195,3 +195,80 @@ stone), `basement`, `linoleum`. Walls: `concrete`, `plaster`, `danchi` (painted 
 grey dado). Tile `R` = outdoor railing with the night city beyond (solid); put a row of `R` along
 the open side of an outdoor corridor and set `rain: 'rail'` on the map to animate rain beyond it.
 `rain: 'full'` rains over the whole screen (courtyard, roof).
+
+## Rules of the hunt (engine behaviour, keep content consistent with it)
+
+- Running (Shift) works only when nothing is hunting Haru (no chase, no walker). During chases
+  Haru walks at 62 px/s, so chaser speed is the difficulty knob: 50-56 for early chases, 60 for
+  the last one.
+- The chaser and walkers **freeze whenever an event runs** (dialogue, door transitions, item
+  pickups, E.wait...). So a door's fade does not eat the latch window, and a mid-chase line of
+  dialogue is never a death sentence. Exceptions: while Haru is hiding, or inside an event that
+  calls `E.worldRuns()` (a cutscene that must play while the hunter keeps moving).
+- Following through doors: he arrives `followDelay` seconds after Haru (default 1.6) and pauses
+  `arriveDelay` (default 0.5) in the doorway before moving. Doubling back toward him does not reset
+  his timer (no door-dancing).
+- Chain latches (`latch: true`) reset at the start of each chase (one use per door per chase).
+- Hiding: if he is within 3.2 tiles and in the room when Haru climbs in, game over with
+  `cfg.seenText`. Otherwise he searches; after `loseAfterHide` (default 5.5) seconds he leaves.
+  While he is in the room the player hears breathing, a heartbeat, and keys when he is close.
+- His footsteps and keys get louder as he gets closer. In rooms with `dark >= 0.7` he carries a
+  dim cold light so he is visible before he reaches Haru.
+- Default chase music is `hunt` (slow pulse). `E.ambushReady(chance, cooldown, max)` never fires in
+  tests, at most `max` (default 3) times per game, and never within 30 s of a retry or load.
+
+### Chase re-arm pattern (use for every scripted chase)
+
+Deaths retry from the last checkpoint. To make a scripted chase restart correctly after a death,
+arm it and checkpoint **before** starting it, and restart it from the room's `enter`:
+
+```js
+function startChase2(E, delay) {
+  E.chase({ char: 'caretaker', at: [12, 4], speed: 56, delay: delay || 1.0, follow: true, followDelay: 2.2,
+    timer: 16, cause: 'caretaker', onEnd: function* (E) { E.set('ch2_done'); } });
+}
+// in the trigger event:
+E.set('ch2_armed'); E.checkpoint(); startChase2(E);
+// in the room's enter (the checkpoint room):
+enter: function* (E) { if (E.flag('ch2_armed') && !E.flag('ch2_done') && !E.chasing()) { E.sfx('keys'); startChase2(E, 1.5); } },
+```
+
+## Shared helpers (js/content/game.js)
+
+- `G.aptDoor('401', x, y, 'a401', tx, ty, {lock, lockText, ...})`: an apartment door object (sprite
+  `door_apt_401`, chain latch on).
+- `G.nightlightObj(x, y, id)`: a save point (wall object on the lower wall row, warm glow).
+- `G.phoneObj(x, y, {id, sprite, extra})`: a black phone; "Call home (404)" plays the hint for
+  the current goal.
+- Goals and hints: `E.goal('Find a way down.', 'ch2_down')`. Register hints by goal id in your
+  chapter: `G.HINTS.ch2_down = [['@mom tier 1: restate the goal'], ['@mom tier 2: name the room'],
+  ['@mom tier 3: name the clue']]` (each call, or every 4 minutes stuck on the goal, unlocks the
+  next tier) or a function `E => lines` for goals with sub-steps. Every goal needs hints.
+- `yield* G.HELP.tamaHiss(E)` (hiss + "!" over the cat if she follows), `yield* G.HELP.mirrorFlash(E, objId,
+  flashSprite, normalSprite, t)`, `yield* G.HELP.keysPass(E)`.
+- `E.bubbleNow(id, kind)` shows a bubble without waiting (use during chases); ids: object id,
+  `'player'` or `'follower'`. `E.worldRuns()` (see above).
+- `G.trueEnd()` returns the list of missing true-ending conditions.
+- Speakers: haru, old_haru, caretaker (name "???" until flag `knowsSato`), mom (phone portrait),
+  voice (unknown voice), yui, nurse, ota, kuroda, shota, shota_cap, guest, tama. Deaths:
+  caretaker, okaeri, guests, hands, steam (add more with `G.DEATHS.cause = 'text'`).
+- `E.chapter('Chapter 2: The Third Floor')` also autosaves.
+
+## Testing your content
+
+- Art preview in a lit room: `index.html?dev=1&stage=1&wall=danchi&floor=tatami&put=name:x:y:w:h[:wall|floor],char=name:x:y:dir&dark=0.6&flashlight=70`.
+- Missing sprites are drawn as magenta boxes and listed in `G.missingArt` (also printed by the
+  walkthrough runner). Only use names from `docs/ART_LIST.md`.
+- Chapter routes: start a route with `{start: {map, x, y, dir, items, flags, notes}}` to test a
+  chapter on its own (flags as an object or list). Every chase in your chapter must be covered
+  by an `{escape: [...]}` step: a bot WALKS the route you give it (door ids, `{hide: id}`,
+  `{tile: [x, y]}`, `{wait: s}`) and must survive until the chase ends. If the bot is caught,
+  the chase is unfair: fix the content (spawn farther away, slower speed, a nearer exit).
+- `NODE_PATH=/opt/node22/lib/node_modules node tools/walkthrough.js <route> [--verbose] [--shots dir]`
+
+## Named entries (connecting rooms across files)
+
+A map can name its arrival points: `entries: { from_c4: [3, 8, 'up'], from_lift: [10, 4, 'down'] }`.
+Doors then use `door: { to: 'stair3', entry: 'from_stair4' }` (no x/y), and `E.goto('c2', 'from_lift')`
+and `{start: {map: 'c3', x: 'from_stair3'}}` accept an entry name in place of x. Every connection
+listed in docs/MANIFEST.md uses entry names, so authors never need each other's coordinates.
