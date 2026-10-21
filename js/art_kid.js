@@ -159,14 +159,16 @@
   ];
   const BAG_L = ['.bb.', 'bbbB', 'bOOB', '.BB.'];
 
+  G.KID_ROWS = { HEAD_D, TORSO_D, LEGS_D, LEGS_D_A, LEGS_D_B, HEAD_U, TORSO_U, HEAD_L, TORSO_L, TORSO_L_A, TORSO_L_B, LEGS_L, LEGS_L_A, LEGS_L_B };
   function build(head, torso, legs, opts) {
     opts = opts || {};
     const px = new G.PX(18, 26);
     const bob = opts.bob || 0;
-    px.stamp(legs, P, 1, 19);
-    px.stamp(torso, P, 1, 13 + bob);
-    px.stamp(head, P, 1, 1 + bob);
-    if (opts.bag) px.stamp(opts.bag, P, 1 + opts.bagX, 19 + bob + (opts.bagY || 0));
+    const PP = opts.pal || P;
+    px.stamp(legs, PP, 1, 19);
+    px.stamp(torso, PP, 1, 13 + bob);
+    px.stamp(head, PP, 1, 1 + bob);
+    if (opts.bag) px.stamp(opts.bag, PP, 1 + opts.bagX, 19 + bob + (opts.bagY || 0));
     if (opts.post) opts.post(px);
     px.outline();
     return px;
@@ -202,7 +204,8 @@
 
   // ---------------- dialogue portrait (40x40) ----------------
   // Drawn with shapes, then outlined. Expressions swap eyes/brows/mouth.
-  function portrait(expr) {
+  function portrait(expr, PP) {
+    const P = PP || G.KIDPAL;
     const C = G.C;
     const px = new G.PX(42, 42);
     const ox = 1, oy = 1;
@@ -312,7 +315,15 @@
     if (!K.portraits[expr]) K.portraits[expr] = portrait(expr);
     return K.portraits[expr];
   };
+  // portrait with a different palette (other characters built on the same face)
+  const PCACHE = {};
+  K.portraitWith = function (key, pal, expr, post) {
+    const k = key + ':' + expr;
+    if (!PCACHE[k]) { PCACHE[k] = portrait(expr, Object.assign({}, G.KIDPAL, pal)); if (post) post(PCACHE[k], expr); }
+    return PCACHE[k];
+  };
 
+  G.kidBuild = build;
   K.build = function () {
     addFrames();
   };
