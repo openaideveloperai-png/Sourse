@@ -209,6 +209,19 @@
       ex().bubbles.push({ id: id, kind: kind, t: 0, life: time || 0.9 });
       yield* E.wait(time || 0.9);
     },
+    // lights flicker: darkness jumps between values a few times
+    *flicker(times, to) {
+      const base = ex().darkOverride !== null && ex().darkOverride !== undefined ? ex().darkOverride : ex().room.def.dark || 0;
+      for (let i = 0; i < (times || 4); i++) {
+        ex().darkOverride = 0.95; G.Audio.sfx('tick');
+        yield* E.wait(0.06 + Math.random() * 0.08);
+        ex().darkOverride = base;
+        yield* E.wait(0.08 + Math.random() * 0.2);
+      }
+      ex().darkOverride = to === undefined ? base : to;
+    },
+    // the protagonist's current objective, shown in the pause menu
+    goal(text) { G.S.flags['@goal'] = text; },
     chapter(text) { G.S.chapter = text; ex().banner = { text: text, t: 0 }; },
     location(text) { ex().banner = { text: text, t: 0, small: true }; },
 

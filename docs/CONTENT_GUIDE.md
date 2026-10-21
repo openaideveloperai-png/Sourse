@@ -168,3 +168,12 @@ Look at the result before moving on.
 - `tools/walkthrough.js <route>` plays the game from New Game following `G.WALKTHROUGH[route]`
   and fails on any softlock, missing path, missing item, or death. Every puzzle chain must be
   covered by the main route.
+
+## Extra state switches
+
+- `E.set('follower', 'charName')`: a companion follows the player's trail (unset to remove).
+- `E.set('playerLight', 90)`: radius of the light the player carries in dark rooms; `E.set('playerLightCol', '#ffb040')` tints it (candle/lantern).
+- `E.set('canRun', false)`: disable running (Shift).
+- `E.set('@playerChar', 'name')`: change the player's sprite set.
+- `E.goal('Find a way into the study.')`: the protagonist's current objective, shown in the pause menu. Update it at every major step so returning players are never lost.
+- `yield* E.flicker(times, endDark)`: lights flicker (darkness spikes) with a click sound.

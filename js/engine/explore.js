@@ -20,6 +20,7 @@
     this.locked = false;
     this.stepT = 0;
     this.grain = 0;
+    this.trail = [];
   }
   G.Explore = Explore;
 
@@ -31,6 +32,8 @@
     this.p.y = y * TS + 14;
     if (dir) this.p.dir = dir;
     this.p.hidden = false;
+    this.trail = [];
+    for (let i = 0; i < 20; i++) this.trail.push([this.p.x, this.p.y, this.p.dir]);
     this.touching = new Set(this.touchedNow());
     this.darkOverride = null;
     const def = this.room.def;
@@ -193,6 +196,7 @@
       G.movePlayer(this.room, p, mx, my, dt, G.PLAYER.speed * (inp.run && G.flag('canRun') !== false ? G.PLAYER.run : 1));
     }
     p.moving = Math.abs(p.x - ox) + Math.abs(p.y - oy) > 0.01;
+    if (p.moving) { this.trail.push([p.x, p.y, p.dir]); if (this.trail.length > 60) this.trail.shift(); }
     if (p.moving) {
       p.walkT += dt * (inp.run ? 1.5 : 1);
       this.stepT -= dt;
@@ -281,6 +285,18 @@
       c.fillRect(Math.round(X + p.x - 5), Math.round(Y + p.y - 2), 10, 2);
       G.drawChar(c, G.S.flags['@playerChar'] || G.PLAYER_CHAR || 'kid', X + p.x, Y + p.y, p.dir, p.moving ? p.walkT : null);
     } });
+    // companion following the player's trail (G.S.flags.follower = charName)
+    const fol = G.S.flags.follower;
+    if (fol && !p.hidden && this.trail.length) {
+      const tr = this.trail[Math.max(0, this.trail.length - 14)];
+      const fm = p.moving;
+      this.folWalk = (this.folWalk || 0) + (fm ? 1 / 60 : 0);
+      list.push({ y: tr[1] - 0.5, draw: (c, X, Y) => {
+        c.fillStyle = 'rgba(8,4,14,0.35)';
+        c.fillRect(Math.round(X + tr[0] - 5), Math.round(Y + tr[1] - 2), 10, 2);
+        G.drawChar(c, fol, X + tr[0], Y + tr[1], tr[2], fm ? this.folWalk : null);
+      } });
+    }
     G.Chase.draw(ctx, list);
     list.sort((a, b) => a.y - b.y);
     for (const it of list) it.draw(ctx, ox, oy);
@@ -288,7 +304,7 @@
     // lighting
     const dark = this.darkOverride !== null && this.darkOverride !== undefined ? this.darkOverride : def.dark || 0;
     if (dark > 0) {
-      lights.push({ x: p.x + ox, y: p.y - 10 + oy, r: def.light || 58, i: 1 });
+      lights.push({ x: p.x + ox, y: p.y - 10 + oy, r: G.S.flags.playerLight || def.light || 58, i: 1, col: G.S.flags.playerLightCol, glow: 0.15, flicker: !!G.S.flags.playerLightCol });
       G.Light.draw(ctx, dark, def.tintDark || '#05030a', lights, this.t);
     } else if (lights.length) {
       ctx.globalCompositeOperation = 'lighter';

@@ -405,8 +405,19 @@
   });
   def('rug_spot', () => { const px = new G.PX(32, 16); px.ellipse(16, 8, 15, 7, C('#6a1e26')); px.ellipse(16, 8, 12, 5, C('#7e2a32')); px.ellipse(16, 8, 6, 2.5, C('#c9a24a')); return fr(px, 16, 16); });
   def('blood', () => { const px = new G.PX(16, 12); const r = G.rng(12); px.ellipse(8, 6, 6, 3.5, C('#5a0810')); px.ellipse(7, 6, 4, 2.2, C('#7a0e18')); for (let i = 0; i < 6; i++) px.set(1 + r.int(14), 1 + r.int(10), C('#6a0a12')); return fr(px, 8, 12); });
-  def('blood_trail', () => { const px = new G.PX(16, 16); const r = G.rng(13); for (let i = 0; i < 9; i++) px.disc(3 + i * 1.3 + r.int(2), 8 + Math.sin(i) * 2, 1.2, C('#5a0810')); return fr(px, 8, 16); });
-  def('footprints', () => { const px = new G.PX(16, 16); for (let i = 0; i < 3; i++) { px.rect(4 + (i % 2) * 5, 2 + i * 5, 2, 3, C('#3a1018')); } return fr(px, 8, 16); });
+  def('blood_trail', () => {
+    const px = new G.PX(16, 16);
+    const r = G.rng(13);
+    for (let i = 0; i < 14; i++) { const x = 1 + i, y = 8 + Math.round(Math.sin(i * 0.6) * 2); px.disc(x, y, 1.4 - (i % 3) * 0.3, i % 4 ? C('#5a0810') : C('#7a0e18')); }
+    for (let i = 0; i < 5; i++) px.set(r.int(16), 4 + r.int(9), C('#4a060c'));
+    return fr(px, 8, 16);
+  });
+  def('footprints', () => {
+    const px = new G.PX(16, 16);
+    const foot = (x, y, flip) => { px.rect(x, y, 2, 3, C('#4a1218')); px.set(x + (flip ? 0 : 1), y - 1, C('#4a1218')); px.set(x, y + 4, C('#4a1218')); px.set(x + 1, y + 4, C('#4a1218')); };
+    foot(4, 1, false); foot(9, 6, true); foot(4, 11, false);
+    return fr(px, 8, 16);
+  });
   def('paper', () => { const px = new G.PX(10, 8); px.poly([[1, 2], [8, 0], [9, 6], [2, 7]], C('#e0d6c0')); px.line(3, 3, 7, 2, C('#8a8070')); px.line(3, 5, 6, 4, C('#8a8070')); px.outline(); return fr(px, 5, 8); });
   def('sparkle', () => {
     const f = [];
@@ -420,17 +431,34 @@
     }
     return f;
   }, 6);
-  def('stairs_down', () => {
-    const px = new G.PX(16, 16);
-    for (let i = 0; i < 4; i++) { px.rect(0, i * 4, 16, 4, G.mix(C('#5a4030'), C('#0a0608'), i / 4)); px.hline(0, 15, i * 4, G.mix(C('#7a5a40'), C('#0a0608'), i / 4)); }
-    px.vline(0, 0, 15, C('#2a1a12')); px.vline(15, 0, 15, C('#2a1a12'));
-    return fr(px, 8, 16);
-  });
+  // staircase going up, seen from below: steps get narrower and darker toward the top
   def('stairs_up', () => {
-    const px = new G.PX(16, 32);
-    for (let i = 0; i < 8; i++) { const y = 28 - i * 4; px.rect(0, y, 16, 4, G.mix(C('#7a5a40'), C('#2a1e18'), i / 9)); px.hline(0, 15, y, G.mix(C('#9a7a58'), C('#3a2a20'), i / 9)); }
-    px.vline(0, 0, 31, C('#3a2418')); px.vline(15, 0, 31, C('#3a2418'));
-    return fr(px, 8, 32);
+    const px = new G.PX(32, 32);
+    const tread = C('#8a6446'), riser = C('#5a3e2c'), edge = C('#a87e58'), rail = C('#3a2418');
+    for (let i = 0; i < 7; i++) {
+      const y = 28 - i * 4;
+      const k = i / 8;
+      px.rect(3, y, 26, 2, G.mix(tread, C('#1e140e'), k));
+      px.hline(3, 28, y, G.mix(edge, C('#2a1c14'), k));
+      px.rect(3, y + 2, 26, 2, G.mix(riser, C('#140c08'), k));
+    }
+    // carpet runner
+    for (let y = 2; y < 32; y++) px.hline(11, 20, y, G.mix(px.get(11, y), C('#6a1e26'), 0.7));
+    px.rect(0, 0, 3, 32, rail); px.rect(29, 0, 3, 32, rail);
+    px.vline(1, 0, 31, C('#5a3a26')); px.vline(30, 0, 31, C('#5a3a26'));
+    for (let y = 4; y < 32; y += 6) { px.set(1, y, C('#7a5236')); px.set(30, y, C('#7a5236')); }
+    px.outline();
+    return fr(px, 16, 32);
+  });
+  def('stairs_down', () => {
+    const px = new G.PX(32, 16);
+    for (let i = 0; i < 4; i++) {
+      const y = i * 4;
+      px.rect(3, y, 26, 4, G.mix(C('#6a4a34'), C('#06040a'), i / 3.5));
+      px.hline(3, 28, y, G.mix(C('#8a6446'), C('#06040a'), i / 3.5));
+    }
+    px.rect(0, 0, 3, 16, C('#3a2418')); px.rect(29, 0, 3, 16, C('#3a2418'));
+    return fr(px, 16, 16);
   });
   def('switch', () => { const px = new G.PX(6, 8); px.rect(0, 0, 6, 8, C('#d8d0c0')); px.rect(2, 2, 2, 4, C('#5a5048')); px.outline(); return fr(px, 3, 10); });
   def('sink', () => { const px = new G.PX(16, 22); px.rect(1, 6, 14, 8, C('#d8dcdc')); px.ellipse(8, 9, 5, 2.5, C('#9aa4a8')); px.rect(7, 1, 2, 6, C('#a8acb4')); px.rect(5, 14, 6, 8, C('#c8ccd0')); px.outline(); return fr(px, 8, 22); });

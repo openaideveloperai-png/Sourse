@@ -103,6 +103,7 @@
           }
         }
         G.text(ctx, 'Time ' + G.fmtTime(G.S.time) + (G.S.chapter ? '   ' + G.S.chapter : ''), 26, H - 24, { color: '#5a5466', shadow: '#000' });
+        if (G.S.flags['@goal']) G.text(ctx, G.clean(G.S.flags['@goal']), W - 26, H - 24, { align: 'right', color: '#a890c0', shadow: '#000' });
       },
     };
     UI.push(p);
