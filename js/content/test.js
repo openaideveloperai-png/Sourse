@@ -13,7 +13,6 @@
     };
     return { down: G.KID.down.map(tint), up: G.KID.up.map(tint), left: G.KID.left.map(tint) };
   });
-  G.PLAYER_CHAR = 'kid';
   G.SPEAKERS.kid = { name: 'Kid', color: '#9fc8ff', blip: 560, portrait: (f) => G.KID.portrait(f) };
   G.ITEMS.brass_key = { name: 'Brass Key', desc: 'A small brass key. The tag says "study".' };
   G.ITEMS.diary = { name: 'Torn Diary Page', note: true, pages: ['Day 12.\nThe piano only plays the old song now.\nE, D, C, D, E, E, E.\n\nThe safe in the study wants the year she was born. 1987.'] };

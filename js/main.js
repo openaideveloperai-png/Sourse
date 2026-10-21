@@ -225,7 +225,8 @@
     for (const it of (q.get('items') || '').split(',').filter(Boolean)) G.S.items.push(it);
     for (const f of (q.get('flags') || '').split(',').filter(Boolean)) G.S.flags[f] = true;
     const ex = new G.Explore();
-    ex.start(q.get('map'), +(q.get('x') || 2), +(q.get('y') || 4), q.get('dir') || 'down');
+    const qx = q.get('x') || '2';
+    ex.start(q.get('map'), isNaN(+qx) ? qx : +qx, +(q.get('y') || 4), q.get('dir') || 'down');
     scene = ex;
   } else if (G.DEV && q.get('scene')) scene = G.GAME.scenes[q.get('scene')]();
   else scene = new G.Title();
