@@ -78,6 +78,7 @@
   // draw sprite frame by time; x,y = anchor point
   // portraits: G.PORTRAITS[name] = (expr) => 42x42 canvas; give the function an `exprs` array
   G.PORTRAITS = G.PORTRAITS || {};
+  G.CHAR_FALLBACK = { staff1: 'caretaker', staff2: 'caretaker', staff3: 'caretaker', shota_cap: 'shota', ota: 'old_haru', kuroda: 'old_haru', yui: 'old_haru', nurse: 'old_haru', mom_memory: 'old_haru', tama: 'shade' };
   G.ART_FALLBACK = {
     fridge_small: 'fridge', kitchen_sink: 'sink', gas_stove: 'stove', kettle_steam: 'stove', bath_tub: 'bathtub', washbasin: 'sink',
     mirror_small: 'mirror', notice_board: 'painting_empty', plant_pot: 'plant', umbrella_stand: 'vase', bicycle: 'crate', trash_bags: 'barrel',
@@ -129,7 +130,12 @@
   // draw a character facing dir; moving -> walk cycle
   G.drawChar = function (ctx, name, x, y, dir, walkT, alpha) {
     const ch = G.getChar(name);
-    if (!ch) { if (name) G.drawMissing(ctx, 'char:' + name, x, y, name); return; }
+    if (!ch) {
+      const fb = G.CHAR_FALLBACK && G.CHAR_FALLBACK[name];
+      if (fb && fb !== name && G.getChar(fb)) { if (!G.missingArt['char:' + name]) G.missingArt['char:' + name] = 'fallback:' + fb; return G.drawChar(ctx, fb, x, y, dir, walkT, alpha); }
+      if (name) G.drawMissing(ctx, 'char:' + name, x, y, name);
+      return;
+    }
     let arr = ch[dir];
     let flip = false;
     if (!arr && dir === 'right') { arr = ch.left; flip = true; }
