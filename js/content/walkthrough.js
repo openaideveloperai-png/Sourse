@@ -1,7 +1,7 @@
 // Scripted routes used by tools/walkthrough.js to prove the game can be finished.
 (function (G) {
   'use strict';
-  G.WALKTHROUGH = {
+  G.WALKTHROUGH = Object.assign(G.WALKTHROUGH || {}, {
     enginetest: [
       { start: { map: 'hall', x: 2, y: 4 } },
       { door: 'door_bed' },
@@ -17,5 +17,5 @@
       { escape: ['exit', 'door_bed', { latch: 'exit' }, { hide: 'ward' }] },
       { expect: { flags: ['safeOpen'] } },
     ],
-  };
+  });
 })(window.G);

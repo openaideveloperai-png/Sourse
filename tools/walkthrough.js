@@ -93,6 +93,7 @@ const path = require('path');
     if (s.chase === 'end') { await p.evaluate(() => { const G = window.__G; if (G.Chase.active) G.Chase.stop(); G.Chase.walkers = []; }); st = await settle(); }
     if (s.wait) { await p.evaluate((t) => window.__G.dev.step(Math.round(t * 60)), s.wait); st = await settle(s.choose); }
     if (s.choose !== undefined && !(s.use || s.door || s.walkTo || s.item || s.answer !== undefined || s.pick !== undefined || s.escape || s.wait)) st = await settle(s.choose);
+    if (verbose) console.log('   ->', JSON.stringify(st), await p.evaluate(() => { const G = window.__G; return G.S.map + ' busy=' + G.EV.busy + ' dlg=' + G.Dialog.active + ' ui=' + G.UI.active; }));
     if (st.gameover) { fail = 'died at step ' + i + ' ' + JSON.stringify(s) + ' in ' + (await where()); break; }
     if (st.stuck) { fail = 'stuck after step ' + i + ' ' + JSON.stringify(s); break; }
     if (s.expect) {

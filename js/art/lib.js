@@ -78,6 +78,22 @@
   // draw sprite frame by time; x,y = anchor point
   // portraits: G.PORTRAITS[name] = (expr) => 42x42 canvas; give the function an `exprs` array
   G.PORTRAITS = G.PORTRAITS || {};
+  G.ART_FALLBACK = {
+    fridge_small: 'fridge', kitchen_sink: 'sink', gas_stove: 'stove', kettle_steam: 'stove', bath_tub: 'bathtub', washbasin: 'sink',
+    mirror_small: 'mirror', notice_board: 'painting_empty', plant_pot: 'plant', umbrella_stand: 'vase', bicycle: 'crate', trash_bags: 'barrel',
+    mantel_clock: 'clock_stopped', boxes_stack: 'crate', mop_bucket: 'barrel', mailboxes: 'cabinet', payphone: 'table_small', dining_table: 'table',
+    shelf_bottles: 'bookshelf_messy', lint_trap: 'cabinet', washer: 'cabinet', washer_run: 'cabinet', basket: 'chest', enlarger: 'lamp',
+    photo_line: 'painting_empty', bench: 'sofa', tree: 'plant_dead', swing: 'cage', slide: 'statue', sandbox: 'rug_spot', jungle_gym: 'cage',
+    fence_low: 'crate', gate_low: 'crate', drain_grate: 'rug_spot', drain_key: 'sparkle', puddle: 'rug_spot', boiler: 'stove', steam: 'sparkle',
+    pipes: 'painting_empty', storage_cage: 'cage', storage_cage_open: 'cage', cage_numbered: 'cage', key_board: 'painting_empty', key_board_open: 'painting_empty',
+    pet_carrier: 'chest', carrier_wired: 'chest_open', staff_cot: 'bed_white', thermos_bento: 'table_small', rounds_sheet: 'paper', hospital_bed: 'bed_white',
+    office_desk: 'desk', filing_cabinet: 'cabinet', clipboard: 'paper', water_tank: 'barrel', laundry_line: 'painting_empty', crt_monitor: 'lamp',
+    mirror_stand: 'mirror', mirror_stand_old: 'mirror', toolbox: 'chest', jungle: 'cage', tarp_bags: 'crate', tarp_bags_hide: 'crate',
+    valve_red: 'switch', valve_blue: 'switch', valve_grey: 'switch', pipe_hot: 'painting_empty', pipe_heat: 'painting_empty', pipe_laundry: 'painting_empty',
+    bench_cardigan: 'sofa', phone_booth_light: 'lamp', kids_drawing_tall: 'paper', lift_doors_in: 'door_iron', lift_wall: 'painting_empty',
+    tv_static: 'tv_crt', window_frosted_shadow: 'window_frosted', haru_futon_empty: 'futon', ota_kneel: 'statue', kuroda_play: 'statue',
+    old_haru_bed: 'bed_white', tama_sit: 'sparkle', tama_chirp: 'sparkle', tama_carrier: 'chest', caretaker_face: 'caretaker_raised',
+  };
   // missing art is drawn as a labelled magenta box so it is easy to spot (and listed in G.missingArt)
   G.missingArt = {};
   G.drawMissing = function (ctx, name, x, y, label) {
@@ -87,7 +103,13 @@
   };
   G.drawSprite = function (ctx, name, x, y, t, flip, alpha) {
     const s = G.getSprite(name);
-    if (!s) { if (name) G.drawMissing(ctx, name, x, y); return; }
+    if (!s) {
+      // stand-ins for sprites that have not been drawn yet (listed so the game never shows holes)
+      const fb = G.ART_FALLBACK && G.ART_FALLBACK[name];
+      if (fb && fb !== name && G.hasSprite(fb)) { if (!G.missingArt[name]) G.missingArt[name] = 'fallback:' + fb; return G.drawSprite(ctx, fb, x, y, t, flip, alpha); }
+      if (name) G.drawMissing(ctx, name, x, y);
+      return;
+    }
     const f = s.frames.length > 1 ? s.frames[Math.floor((t || 0) * s.fps) % s.frames.length] : s.frames[0];
     G.drawFrame(ctx, f, x, y, flip, alpha);
   };

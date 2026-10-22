@@ -196,6 +196,7 @@
     stairs() { const t = now(); for (let i = 0; i < 4; i++) { noise(t + i * 0.12, 0.06, 0.12, 'lowpass', 500); osc('sine', 110, t + i * 0.12, 0.06, 0.08, { slide: 70 }); } },
     step(kind) {
       const t = now();
+      if (kind === 'water') { noise(t, 0.09, 0.07, 'bandpass', 1100, { q: 1 }); noise(t + 0.03, 0.12, 0.03, 'highpass', 3000); return; }
       if (kind === 'stone') noise(t, 0.04, 0.05, 'bandpass', 1600, { q: 2 });
       else if (kind === 'carpet') noise(t, 0.05, 0.025, 'lowpass', 500);
       else { noise(t, 0.05, 0.05, 'bandpass', 700, { q: 2 }); if (Math.random() < 0.08) osc('sawtooth', 140 + Math.random() * 60, t, 0.18, 0.012, { filter: ['lowpass', 500] }); }
@@ -245,7 +246,46 @@
     splash() { const t = now(); noise(t, 0.4, 0.2, 'bandpass', 1200, { slide: 400, q: 1 }); },
     breath() { const t = now(); noise(t, 0.9, 0.06, 'bandpass', 700, { q: 2, attack: 0.4 }); noise(t + 1.0, 0.8, 0.05, 'bandpass', 600, { q: 2, attack: 0.3 }); },
     static() { const t = now(); noise(t, 0.8, 0.12, 'bandpass', 3000, { q: 0.5 }); },
+    // a cat's short rising trill (Tama's warning / greeting)
+    chirp() { const t = now(); osc('triangle', 900, t, 0.12, 0.05, { slide: 1500, vib: [30, 25] }); osc('triangle', 1300, t + 0.1, 0.1, 0.04, { slide: 1800 }); },
+    creak() { const t = now(); osc('sawtooth', 120, t, 0.7, 0.03, { slide: 90, vib: [11, 18], filter: ['bandpass', 600] }); },
+    collapse() { const t = now(); for (let i = 0; i < 6; i++) noise(t + i * 0.09 + Math.random() * 0.05, 0.25, 0.25 - i * 0.03, 'lowpass', 900 - i * 80); osc('sine', 70, t, 0.6, 0.25, { slide: 35 }); },
+    record() { const t = now(); for (let i = 0; i < 14; i++) noise(t + Math.random() * 1.2, 0.012, 0.05, 'highpass', 4000); noise(t, 1.3, 0.02, 'bandpass', 2500, { q: 0.4 }); },
+    click() { const t = now(); noise(t, 0.02, 0.12, 'highpass', 2500); },
   });
+  // play a note sequence: [['E4', 0.5], [null, 0.25], ['G4', 0.5]] (names or Hz; null = rest)
+  // opts {wave: 'piano'|'detuned'|'hum'|'chime', vol, slow (tempo multiplier), detune (cents of drift)}
+  const NOTE_I = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+  const noteHz = (n) => {
+    if (typeof n === 'number') return n;
+    const m = /^([A-G])(#|b)?(-?\d)$/.exec(n);
+    if (!m) return 440;
+    const semi = NOTE_I[m[1]] + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + (+m[3] + 1) * 12;
+    return 440 * Math.pow(2, (semi - 69) / 12);
+  };
+  A.tune = function (notes, opts) {
+    opts = opts || {};
+    const handle = { stopped: false, duration: 0, stop() { this.stopped = true; } };
+    if (!A.ready || A.muted) { handle.duration = notes.reduce((s, n) => s + (n[1] || 0.4), 0) * (opts.slow || 1); return handle; }
+    let t = now() + 0.05;
+    const vol = opts.vol === undefined ? 1 : opts.vol;
+    let k = 0;
+    for (const [n, d0] of notes) {
+      const d = (d0 || 0.4) * (opts.slow || 1);
+      if (n !== null && n !== undefined) {
+        let f = noteHz(n);
+        if (opts.detune) f *= Math.pow(2, ((Math.sin(k * 1.7) * opts.detune) / 1200));
+        const w = opts.wave || 'piano';
+        if (w === 'hum') { osc('sine', f, t, d * 1.1, 0.05 * vol, { attack: 0.08, release: d * 0.4, vib: [5, 6] }); osc('triangle', f / 2, t, d * 1.1, 0.02 * vol, { attack: 0.1 }); }
+        else if (w === 'chime') { osc('sine', f, t, d * 2.5, 0.07 * vol, { release: d * 2.2 }); osc('sine', f * 2.01, t, d * 1.5, 0.02 * vol, { release: d * 1.2 }); }
+        else if (w === 'detuned') { osc('triangle', f * 1.02, t, d * 1.6, 0.07 * vol, { release: d * 1.4 }); osc('sine', f * 0.985, t, d * 1.6, 0.05 * vol, { release: d * 1.4 }); }
+        else { osc('triangle', f, t, d * 2.2, 0.09 * vol, { release: d * 2 }); osc('sine', f * 2, t, d * 1.2, 0.025 * vol, { release: d }); }
+      }
+      t += d; k++;
+    }
+    handle.duration = t - now();
+    return handle;
+  };
   A.note = function (freq, kind) {
     if (!A.ready || A.muted) return;
     const t = now();

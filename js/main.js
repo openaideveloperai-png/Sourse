@@ -298,6 +298,7 @@
     // doors when asked on the way, {max: seconds} time limit, {until: 'chaseEnd'|'route'}.
     escape(targets, opts) {
       opts = opts || {};
+      const wasPaused = this.paused;
       const TS = G.TS, q = targets.slice();
       const out = { ok: false, t: 0, log: [] };
       const say = (m) => out.log.push(Math.round(out.t * 10) / 10 + 's ' + G.S.map + ': ' + m);
@@ -387,7 +388,7 @@
         }
         say('time limit'); out.err = 'time limit';
         return out;
-      } finally { this.paused = false; this._wantLatch = false; }
+      } finally { this.paused = wasPaused; this._wantLatch = false; }
     },
     // run frames until nothing is happening: advances dialogue, answers choices with `picks`
     // (array of option indices, used in order, default 0), closes notes/pictures.
@@ -407,7 +408,11 @@
           }
           if (G.Dialog.active) {
             G.Dialog.chars = G.Dialog.total;
-            if (G.Dialog.choice) G.Dialog.choice.sel = picks.length ? picks.shift() : 0;
+            if (G.Dialog.choice) {
+              const c = G.Dialog.choice;
+              if (c._pick === undefined) c._pick = picks.length ? picks.shift() : 0;
+              c.sel = c._pick;
+            }
             this.step(1, { ok: true, anyPress: true });
             continue;
           }
