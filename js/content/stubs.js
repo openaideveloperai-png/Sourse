@@ -13,9 +13,9 @@
     // C
     c2: { entries: ['from_lift'] },
     stair2: { entries: ['from_3f', 'from_1f'], doors: [['up', 'stair3', 'from_2f'], ['down', 'stair1', 'from_2f']] },
-    a201: {}, a202: { doors: [['hole', 'office', 'from_rope']] }, a203: {},
+    a201: {}, a202: { entries: ['from_office'], doors: [['hatch', 'office', 'from_hatch']] }, a203: {},
     // D
-    office: { entries: ['from_rope'] }, lobby: {},
+    office: { entries: ['from_hatch'], doors: [['ladder', 'a202', 'from_office']] }, lobby: {},
     stair1: { entries: ['from_2f', 'from_b1'], doors: [['up', 'stair2', 'from_1f'], ['b1door', 'b1_hall', 'from_1f']] },
     yard: {}, bikes: {}, reality: {},
     // E

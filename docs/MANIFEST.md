@@ -4,8 +4,12 @@ Five chapter authors write content in parallel. Until a neighbour's maps exist, 
 rooms from `js/content/stubs.js` stand in for them (grey rooms with the entries and doors
 listed below), so every connection can be tested from day one. This file is the contract between them:
 who owns which map, how rooms connect across files, and the ids of shared items and flags.
-Read `docs/design.md` (the game), `docs/CONTENT_GUIDE.md` (the engine) and
+Read `docs/design.md` (the game, v2: the build spec), `docs/CONTENT_GUIDE.md` (the engine) and
 `docs/ART_LIST.md` (sprite names) first.
+
+Registry chases (`G.CHASES.id`) are defined by the author whose map the chase STARTS in:
+`c1_403`, `c1` (A), `c2` (C; armed by B's lift cutscene with flag `chase2_armed`), `c3yard` (D),
+`c4stalk`, `c4` (E).
 
 ## Files and ownership
 
@@ -43,7 +47,8 @@ the matching door, facing away from it).
 | stair2 (C) | `down` (stairs_down) | stair1 (D) | `from_2f` | flag `stairsOpen` (before: the 1F door is locked from the other side) |
 | stair1 (D) | `up` (stairs_up) | stair2 (C) | `from_1f` | flag `stairsOpen` |
 | lift (B) | scripted: Chase 2 cutscene `E.goto('c2', 'from_lift')` | c2 (C) | `from_lift` | the lift jams at 2F |
-| a202 (C) | `hole` (rope down) | office (D) | `from_rope` | bedsheet tied (flag `ropeTied`) |
+| a202 (C) | `hatch` (balcony escape hatch, ladder down) | office (D) | `from_hatch` | item `hatch_key` (flag `hatchOpen`) |
+| office (D) | `ladder` (up to 202's balcony) | a202 (C) | `from_office` | always |
 | stair1 (D) | `b1door` (door_basement) | b1_hall (E) | `from_1f` | item `basement_key` |
 | b1_hall (E) | `up` (stairs_up) | stair1 (D) | `from_b1` | always |
 
@@ -59,25 +64,25 @@ Items listed are held at the start of the chapter; flags are set. `follower: 'ta
 | --- | --- | --- | --- | --- |
 | Ch1 (A) | New Game | - | - | - |
 | Ch2 (B) | `stair3`, entry `from_4f`, Chase 1 over (author A tests the chase 1 escape, which ends on 4F or on the stair3 landing) | flashlight, ota_keyring | follower: 'tama', ch1_done, chase1_done, reached3F | note_fridge, postcard, kids_note, letter_1 |
-| Ch3a (C) | `c2`, entry `from_lift`, chase 2 starts in C's `enter` if flag `chase2_armed` and not `chase2_done` | flashlight, photo_1974, fishing_rod, (hearing_aid given away or held) | follower: 'tama', ch2_done, chase2_armed, reached3F | + letter_2 |
-| Ch3b (D) | `office`, entry `from_rope` | flashlight, photo_1974, fishing_rod, gate_key | follower: 'tama', ch2_done, chase2_done, ropeTied, ch3a_done | + letter_3 |
-| Ch4 (E) | `b1_hall`, entry `from_1f` | flashlight, keeper_key, (wire_cutters) | stairsOpen, tama_taken, ch3_done | + letter_4 |
+| Ch3a (C) | `c2`, entry `from_lift`, chase 2 starts in C's `enter` if flag `chase2_armed` and not `chase2_done` | flashlight, photo_1977, fishing_rod | follower: 'tama', ch2_done, chase2_armed, reached3F, c2_kuroda, c2_shota | + letter_2 |
+| Ch3b (D) | `office`, entry `from_hatch` | flashlight, photo_1977, fishing_rod, gate_key | follower: 'tama', ch2_done, chase2_done, hatchOpen, ch3a_done, metaTitle | + letter_3 |
+| Ch4 (E) | `b1_hall`, entry `from_1f` | flashlight, keeper_key, wire_cutters | stairsOpen, tama_taken, ch3_done | + letter_4 |
 | Finale (D) | `lobby`, after Chase 4 | front_key, ... | chase4_done, (tama_saved, follower: 'tama') | + letter_5 |
 
 ## Shared item ids
 
 Prologue/Ch1 (A): `flashlight`, `batteries`, `fish_sausage`, `key_403`, `ota_keyring`,
 `key_stairs4`; documents `note_fridge`, `postcard`, `timetable`, `kids_note`, `letter_1`.
-Ch2 (B): `sheet_1`, `sheet_2`, `sheet_3` -> `kuroda_song` (recipe), `developer`, `photo_1974`,
-`lift_key`, `fishing_rod`, `hearing_aid`; documents `music_chart`, `inspection_card`, `letter_2`.
-Ch3a (C): `bedsheet`, `gate_key`; documents `birthday_card`, `letter_3`.
+Ch2 (B): `sheet_1`, `sheet_2`, `sheet_3` -> `kuroda_song` (recipe; a document), `developer`,
+`photo_1977` (document), `lift_key`, `fishing_rod`; documents `music_chart`, `letter_2`.
+Ch3a (C): `gate_key`, `hatch_key`; documents `birthday_card`, `letter_3`.
 Ch3b (D): `keeper_key`, `cap`, `basement_key`, `wire_cutters`; documents `clipboard`,
 `notice_rules`, `letter_4`.
-Ch4 (E): `pressure_chart`, `front_key`; documents `night_log`, `letter_5`.
+Ch4 (E): `pressure_chart` (document), `front_key`; documents `night_log`, `bento_note`, `letter_5`.
 
-Items used in another author's chapter: `photo_1974` (B gives, A uses: Ota's optional beat),
-`fishing_rod` (B gives, D uses on the drain), `bedsheet` (C), `keeper_key` (D gives, E uses),
-`wire_cutters` (D gives, E uses on Tama's carrier), `front_key` (E gives, D uses in the finale).
+Items used in another author's chapter: `fishing_rod` (B gives, D uses on the drain),
+`keeper_key` (D gives, E uses), `wire_cutters` (D gives, E uses on Tama's carrier),
+`front_key` (E gives, D uses in the finale), `cap` (D gives, D uses: Shota on the lobby bench).
 The defining author writes the item's `G.ITEMS` entry (name, desc).
 
 ## Shared flags
@@ -88,7 +93,7 @@ The defining author writes the item's `G.ITEMS` entry (name, desc).
 | `ch1_done`, `chase1_done` | A | stair door opened, chase 1 survived |
 | `reached3F` | B | first arrival on 3F (enables the rare phone call) |
 | `ch2_done`, `chase2_armed`, `chase2_done` | B, C | lift taken; chase 2 armed by B, finished in C |
-| `ropeTied`, `ch3a_done` | C | the bedsheet rope in 202 |
+| `hatchOpen`, `ch3a_done` | C | the 202 balcony escape hatch is open |
 | `stairsOpen` | D | first entry into the lobby: every stair flight connects again |
 | `metaTitle` | C | the browser-tab scare is allowed (from Ch3) |
 | `tama_taken` | D | the courtyard: the Caretaker takes Tama |
@@ -96,9 +101,10 @@ The defining author writes the item's `G.ITEMS` entry (name, desc).
 | `ch3_done` | D | basement key in hand |
 | `tama_saved` | E | Tama freed from the carrier |
 | `chase4_done` | E | escaped to the lobby |
-| `helped_ota` | A | photo_1974 given to Mrs. Ota (optional, late revisit) |
-| `helped_kuroda` | B | hearing aid returned to Mr. Kuroda (optional) |
-| `helped_shota` | D | cap returned to Shota on the lobby bench (optional) |
+| `ota_tea` | A | sat and had tea with Mrs. Ota (true-ending act; offered on every visit after her puzzle) |
+| `c2_kuroda`, `c2_shota` | B | Kuroda's song played; Shota's three rounds won |
+| `powerOut` | A | prologue: the lights died (404 dark from then on) |
+| `helped_shota` | D | cap returned to Shota on the lobby bench (true-ending act) |
 | `knowsSato` | D | finale: the Caretaker's name is known |
 
 Goal ids are prefixed by chapter (`p_`, `c1_`, `c2_`, `c3_`, `c1f_`, `c4_`, `fin_`). Every goal

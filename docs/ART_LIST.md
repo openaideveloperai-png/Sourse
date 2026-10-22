@@ -225,7 +225,8 @@ Pictures (`E.picture(name)`, up to 160x100):
 | `pic_hands_receiver` | two old wrinkled hands holding a black telephone receiver |
 | `pic_dawn_1958` | dawn in a 1958 doorway: a young mother in a rain-wet nurse's coat holding a squashed cake box, a small boy in striped pajamas |
 | `pic_carepost` | the true-ending room at sunrise: old Haru in a care bed, a grey cat on the blanket, a woman with a bag of oranges at the door |
-| `pic_mom_photo` | a photo of a young mother holding a baby, "Haruko and Haru, 1964" on the white border |
+| `pic_mom_photo` | a black-and-white photo of a young mother holding a baby, "Fumiko and Haru, 1949" on the white border |
+| `pic_blank` | a blank wet sheet of photo paper in a developing tray, red-lit (same size as pic_photo_1977; the photo "develops" from it) |
 | `pic_pressure_chart` | a pinned handwritten chart: WINTER SETTINGS / HOT WATER - high / HEATING - low / LAUNDRY - mid |
 
 ## D. Second batch (from the design review) (file `js/art/extra.js`)
