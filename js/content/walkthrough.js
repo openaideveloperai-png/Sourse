@@ -17,5 +17,13 @@
       { escape: ['exit', 'door_bed', { latch: 'exit' }, { hide: 'ward' }] },
       { expect: { flags: ['safeOpen'] } },
     ],
+    // the whole game, New Game to the true ending, chaining the chapter routes (each chapter's
+    // {start} step is dropped: the previous chapter ends in its hand-off state)
+    main: function () {
+      const W = G.WALKTHROUGH;
+      const tail = (r) => W[r].filter((s) => !s.start);
+      return [].concat(W.ch1, tail('ch2'), tail('ch3'), tail('ch1f'), tail('ch4'),
+        [{ use: 'front' }, { expect: { flags: ['fin_ringing'] } }, { use: 'payphone', choose: [0, 0] }, { expect: { ending: 'welcome_home' } }]);
+    },
   });
 })(window.G);
