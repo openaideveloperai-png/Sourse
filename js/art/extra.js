@@ -159,7 +159,7 @@
         let k = base;
         const d = j - split;
         if (d > 1 || (d >= -1 && G.bayer(x + i, y + j) < (d + 2) / 4)) k--;
-        if (G.hash(x + i, (y + j) >> 3, seed + 5) > 0.9) k++;
+        if (G.hash(x + i, (y + j) >> 3, seed + 5) > 0.95) k++;
         px.set(x + i, y + j, S[G.clamp(k, 0, S.length - 1)]);
       }
     }
@@ -525,10 +525,10 @@
     // kick plate at the floor
     px.rect(0, 27, 16, 5, CHROME[3]);
     px.hline(0, 15, 27, CHROME[1]);
-    for (let y = 28; y < 32; y++) for (let x = (y % 2); x < 16; x += 3) px.set(x, y, CHROME[4]);
-    // a few fine scratches catching the light
-    const rnd = G.rng(77);
-    scratches(px, 1, 4, 14, 12, CHROME[0], 3, rnd);
+    for (let y = 28; y < 31; y += 2) for (let x = (y % 4 === 0 ? 0 : 2); x < 16; x += 4) { px.set(x, y, CHROME[2]); px.set(x + 1, y + 1, CHROME[4]); }
+    px.hline(0, 15, 31, CHROME[4]);
+    // fine horizontal scuffs where trolleys and wheelchairs brushed the panel
+    for (const [x, y, l] of [[2, 24, 4], [9, 25, 3], [5, 12, 2]]) px.hline(x, x + l - 1, y, mix(px.get(x, y), CHROME[0], 0.35));
     px.outline();
     return fr(px, 8, 32);
   });
@@ -541,16 +541,16 @@
   const SOLFA = ['DO', 'RE', 'MI', 'FA', 'SO', 'LA', 'TI', 'DO'];
   const SOLFA_C = R('#b0443a', '#c0702c', '#a08a24', '#467e40', '#2e7e80', '#4656a2', '#82469a', '#b0443a');
   def('music_chart', () => {
-    const W = 33, H = 23, px = new G.PX(W, H + 1);
+    const W = 33, H = 25, px = new G.PX(W, H + 1);
     const T = 1;
     px.rect(0, T, W, H, PAPER[1]);
     vgrad(px, 0, T, W, H, [PAPER[0], PAPER[1], PAPER[1], PAPER[2]]);
     px.hline(0, W - 1, T, PAPER[0]); px.vline(0, T + 1, T + H - 1, PAPER[1]);
     px.vline(W - 1, T + 1, T + H - 1, PAPER[3]); px.hline(1, W - 1, T + H - 1, PAPER[3]);
-    // the syllables, two rows of four, each in its colour
-    for (let i = 0; i < 8; i++) text(px, SOLFA[i], 1 + (i & 3) * 8, T + 2 + (i >> 2) * 6, SOLFA_C[i]);
+    // the syllables, two rows of four, each in its colour, stepping up and down like a tune
+    for (let i = 0; i < 8; i++) text(px, SOLFA[i], 1 + (i & 3) * 8, T + 2 + (i >> 2) * 7 + (i & 1 ? 0 : 1), SOLFA_C[i]);
     // keyboard: eight white keys (3px + 1px line) with a colour dot each, black keys on top
-    const ky = T + 14;
+    const ky = T + 16;
     px.rect(0, ky - 1, W, 9, C('#3a3438'));
     for (let i = 0; i < 8; i++) {
       const x = 1 + i * 4;
@@ -566,12 +566,12 @@
     px.set(W - 1, T + H - 1, 0); px.set(W - 2, T + H - 1, PAPER[4]); px.set(W - 1, T + H - 2, PAPER[4]);
     px.outline();
     drop(px, 1, 1, SHADOW2);
-    return wallF(px, 26);
+    return wallF(px, 27);
   });
 
   // a train timetable card pinned in the genkan: hours 21-23, the last train (23:40) circled
   def('timetable', () => {
-    const W = 19, H = 23, px = new G.PX(W, H + 2);
+    const W = 20, H = 25, px = new G.PX(W, H + 2);
     const T = 2;
     px.rect(0, T, W, H, PAPER[1]);
     vgrad(px, 0, T, W, H, [PAPER[0], PAPER[1], PAPER[2]]);
@@ -582,24 +582,24 @@
     // hour column | minutes
     px.vline(9, T + 4, T + H - 2, PAPER[3]);
     const rows = [['21', '15'], ['22', '08'], ['23', '40']];
+    rows.forEach((r, j) => { if (j < 2) px.hline(1, W - 2, T + 10 + j * 6, PAPER[2]); });
+    // red pencil ring round the 40 (drawn under the ink), the stroke overlapping where it began
+    const rx = 5.1, ry = 4.1, cx = 14.5, cy = T + 19.5;
+    for (let y = T + 14; y < T + H; y++) for (let x = 8; x < W; x++) {
+      const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry, d = dx * dx + dy * dy;
+      if (d > 0.74 && d < 1.14 && !(dx > 0.3 && dy < -0.55 && d > 0.98)) px.set(x, y, C('#b8302a'));
+    }
+    px.set(18, T + 15, C('#c8443c')); px.set(19, T + 14, C('#b8302a'));
     rows.forEach(([h, m], j) => {
-      const y = T + 6 + j * 6;
+      const y = T + 5 + j * 6;
       text(px, h, 1, y, INK);
       text(px, m, 11, y, j === 2 ? INK : C('#6a6670'));
-      if (j < 2) px.hline(1, W - 2, y + 5, PAPER[2]);
     });
-    // red pencil ring round the 40, the stroke overlapping where it started
-    const rx = 5.2, ry = 4, cx = 14.5, cy = T + 18.5;
-    for (let y = T + 13; y < T + H; y++) for (let x = 8; x < W; x++) {
-      const dx = (x + 0.5 - cx) / rx, dy = (y + 0.5 - cy) / ry, d = dx * dx + dy * dy;
-      if (d > 0.72 && d < 1.12 && !(dx > 0.4 && dy < -0.5 && d > 0.98)) px.set(x, y, C('#b8302a'));
-    }
-    px.set(17, T + 13, C('#c8443c')); px.set(18, T + 14, C('#b8302a'));
     // pushpin
-    px.rect(8, 0, 3, 2, C('#4a6a9a')); px.set(8, 0, C('#8aa8d0')); px.set(10, 1, C('#2a3a5a'));
+    px.rect(9, 0, 3, 2, C('#4a6a9a')); px.set(9, 0, C('#8aa8d0')); px.set(11, 1, C('#2a3a5a'));
     px.outline();
     drop(px, 1, 1, SHADOW2);
-    return wallF(px, 26);
+    return wallF(px, 28);
   });
 
   // a wooden pillar strip with pencil marks: a child's height, birthday after birthday
@@ -615,16 +615,18 @@
     px.vline(1, 0, H - 1, mix(DWOOD[0], WOOD[1], 0.4));
     // skirting at the floor
     px.rect(0, 29, W, 3, DWOOD[3]); px.hline(0, W - 1, 29, DWOOD[1]);
-    // graphite marks: a line, then a tiny scribbled name/age under it (shiny grey on dark wood)
-    const GR = C('#b4aea2'), GRd = C('#8a8478');
-    const marks = [[25, 6, 1], [22, 5, 2], [19, 6, 3], [17, 5, 4], [14, 6, 5], [12, 5, 6], [10, 6, 7], [8, 5, 8]];
+    // graphite marks: a short ruled line and a tiny scribbled name/age under it. Graphite on dark
+    // wood shows as a dull silver; the older marks have rubbed fainter.
+    const marks = [[25, 6, 1], [22, 5, 2], [20, 6, 3], [17, 4, 4], [15, 6, 5], [12, 5, 6], [10, 6, 7], [8, 4, 8]];
     for (const [y, len, i] of marks) {
-      px.hline(1, len, y, GR);
-      px.set(len + 1, y, GRd);
-      // scribble: alternate between "HARU" squiggles and numbers
-      const s = G.rng(i * 13);
-      for (let j = 0; j < 4; j++) if (s() < 0.75) px.set(2 + j, y + 1, s() < 0.5 ? GRd : mix(DWOOD[1], GR, 0.5));
+      const fade = 0.25 + (i / 8) * 0.55;
+      const g1 = mix(DWOOD[1], C('#c4beb2'), fade), g2 = mix(DWOOD[1], C('#a8a296'), fade * 0.6);
+      px.hline(1, len, y, g1);
+      const s = G.rng(i * 13 + 2);
+      for (let j = 0; j < 4; j++) if (s() < 0.7) px.set(2 + j, y + 1 + (s() < 0.3 ? 1 : 0), g2);
     }
+    // the newest mark, last spring, in Mom's red pencil
+    px.hline(1, 6, 7, C('#a84a40')); px.set(3, 8, C('#7a4038')); px.set(4, 8, C('#7a4038'));
     // a nail and the dark hole of a missing one
     px.set(5, 3, C('#a8a49c')); px.set(5, 4, C('#46403c'));
     px.set(4, 27, DWOOD[4]);

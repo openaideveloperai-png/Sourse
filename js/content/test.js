@@ -61,7 +61,7 @@
         else yield* E.say('@ An empty drawer.');
       } },
       { id: 'mirror', x: 6, y: 2, sprite: 'mirror', z: 'wall', on: function* (E) { yield* E.say('@ For a moment, someone else looks back.'); } },
-      { id: 'exit', x: 4, y: 7, touch: true, door: { to: 'hall', x: 3, y: 3, dir: 'down', walk: true } },
+      { id: 'exit', x: 4, y: 7, touch: true, latch: true, door: { to: 'hall', x: 3, y: 3, dir: 'down', walk: true } },
       { id: 'blood', x: 2, y: 6, sprite: 'blood', z: 'floor', solid: false },
     ],
   };

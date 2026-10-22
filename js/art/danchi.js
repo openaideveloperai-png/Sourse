@@ -1172,4 +1172,440 @@
     drop(px, 1, 1, SHADOW2);
     return wallF(px, 31);
   }), 6);
+
+  // =====================================================================
+  //  TATAMI ROOM AND GENKAN
+  // =====================================================================
+  // a 3/4 box: top face (lit, its front lip brightest) over a front face (left lit, right/bottom shaded)
+  function box34(px, x, y, w, h, topH, T, F) {
+    px.rect(x, y, w, topH, T[1]);
+    px.hline(x, x + w - 1, y, T[2]);
+    px.hline(x, x + w - 1, y + topH - 1, T[0]);
+    px.vline(x, y, y + topH - 1, T[1]);
+    px.rect(x, y + topH, w, h - topH, F[2]);
+    px.hline(x, x + w - 1, y + topH, F[3]);
+    px.vline(x, y + topH + 1, y + h - 1, F[1]);
+    px.vline(x + w - 1, y + topH, y + h - 1, F[3]);
+    px.hline(x, x + w - 1, y + h - 1, F[4]);
+  }
+  const LWOOD = R('#d0aa78', '#b48c5c', '#967046', '#765434', '#523a24'); // light household wood
+
+  // ---- genkan step: the raised wooden floor edge and two pairs of shoes (1x1 floor decal) ----
+  def('genkan_step', () => {
+    const px = new G.PX(16, 16);
+    // the raised hallway floor (planks) and its front edge (agarikamachi)
+    px.rect(0, 0, 16, 4, LWOOD[1]);
+    px.hline(0, 15, 0, LWOOD[2]); px.set(5, 1, LWOOD[2]); px.set(6, 1, LWOOD[2]); px.set(12, 2, LWOOD[2]);
+    px.hline(0, 15, 3, LWOOD[0]);
+    px.rect(0, 4, 16, 3, LWOOD[3]);
+    px.hline(0, 15, 4, LWOOD[2]); px.hline(0, 15, 6, LWOOD[4]);
+    px.set(3, 5, LWOOD[4]); px.set(10, 5, LWOOD[2]);
+    // a child's canvas sneakers, toes to the door
+    const SN = R('#9ab4d8', '#6e8cbc', '#526c9a', '#3c5078', '#2a3854');
+    const sneaker = (x, y) => {
+      px.stamp(['.ww.', 'wbbw', 'b..b', 'bllb', 'bbbb', 'wwww', '.ww.'], { w: C('#e8e4da'), b: SN[2], l: C('#f0ece4') }, x, y);
+      px.set(x + 1, y + 2, VOID2); px.set(x + 2, y + 2, C('#2a2830'));
+      px.set(x, y + 3, SN[1]); px.set(x + 3, y + 4, SN[3]); px.set(x + 3, y + 5, C('#b8b2a6'));
+    };
+    sneaker(1, 8); sneaker(6, 9);
+    // a pair of grown-up's wooden geta with dark thongs
+    const geta = (x, y) => {
+      px.rect(x, y, 3, 7, LWOOD[1]);
+      px.vline(x, y, y + 6, LWOOD[0]); px.vline(x + 2, y + 1, y + 6, LWOOD[2]); px.hline(x, x + 2, y + 6, LWOOD[3]);
+      px.set(x + 1, y + 1, C('#2a1a1c')); px.set(x, y + 2, C('#5a1e22')); px.set(x + 2, y + 2, C('#5a1e22'));
+      px.set(x + 1, y + 2, LWOOD[1]);
+    };
+    geta(11, 8); geta(14, 8);
+    px.outline();
+    // shadow under the step edge onto the genkan floor, and under the shoes
+    shade(px, 0, 7, 16, 1, SHADOW);
+    shade(px, 0, 8, 16, 1, SHADOW2);
+    return fr(px, 8, 16);
+  });
+
+  // ---- low wooden shoe cabinet (getabako) (1x1) ----
+  def('shoe_cabinet', () => {
+    const px = new G.PX(16, 22);
+    box34(px, 0, 2, 16, 18, 5, LWOOD, R('#a07a50', '#8a6640', '#74532f', '#5a3f24', '#3e2b18'));
+    const F = R('#a07a50', '#8a6640', '#74532f', '#5a3f24', '#3e2b18');
+    // two doors with ventilation slats and little brass knobs
+    for (const dx of [1, 8]) {
+      px.rect(dx + 1, 8, 5, 10, F[2]);
+      px.hline(dx + 1, dx + 5, 8, F[1]); px.vline(dx + 1, 9, 17, F[1]); px.vline(dx + 5, 9, 17, F[3]); px.hline(dx + 2, dx + 5, 17, F[3]);
+      for (let y = 10; y <= 13; y += 2) px.hline(dx + 2, dx + 4, y, F[4]);
+    }
+    px.vline(7, 8, 17, F[4]); px.vline(8, 8, 17, F[3]);
+    px.set(6, 15, GOLD[1]); px.set(9, 15, GOLD[1]); px.set(6, 16, GOLD[3]); px.set(9, 16, GOLD[3]);
+    // plinth and feet
+    px.rect(1, 20, 2, 2, F[4]); px.rect(13, 20, 2, 2, F[4]);
+    // on top: a small dish with a key and a bud vase with a dried flower
+    px.rect(2, 4, 5, 2, C('#c8c0b0')); px.hline(2, 6, 4, C('#e8e2d4')); px.set(4, 4, GOLD[1]); px.set(5, 4, GOLD[2]);
+    px.rect(11, 1, 2, 4, C('#5a6a7a')); px.set(11, 1, C('#7a8c9c')); px.hline(10, 13, 5, C('#3e4a56'));
+    px.set(12, 0, C('#8a7a5a')); px.set(11, 0, C('#a08a5a'));
+    px.outline();
+    floorShadow(px, 8, 21, 8, 1.5);
+    return fr(px, 8, 22);
+  });
+
+  // ---- kotatsu: low table under a quilted check blanket (2x2) ----
+  const QUILT = R('#d08850', '#b46a3a', '#96542c', '#743e22', '#522a18');
+  const QCHK = C('#6a3a20'), QCHK2 = C('#e4a868');
+  function kotatsu(glow) {
+    const px = new G.PX(36, 32);
+    const O = 2; // x margin
+    const T = R('#a87a52', '#8e6440', '#764f30', '#5c3c24', '#3e2818');
+    // the blanket spreading on the floor (outline of the whole quilt)
+    const inQuilt = (x, y) => {
+      if (y < 4 || y > 28) return false;
+      const lx = x - O;
+      if (lx < 0 || lx > 31) return false;
+      // rounded back corners, flared front corners
+      if (y < 6 && (lx < 2 - (y - 4) || lx > 29 + (y - 4))) return false;
+      if (y > 26 && (lx < y - 26 || lx > 31 - (y - 26))) return false;
+      return true;
+    };
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 36; x++) if (inQuilt(x, y)) {
+      const lx = x - O;
+      // the hanging front drape (y 18..28) has vertical folds; the top part lies around the table
+      let c = QUILT[1];
+      if (y >= 19) {
+        const fold = (lx + 2) % 8;
+        c = fold === 0 ? QUILT[3] : fold < 3 ? QUILT[1] : fold < 6 ? QUILT[2] : QUILT[2];
+        if (fold === 1) c = QUILT[0];
+        if (y >= 26) c = mix(c, QUILT[3], 0.35);
+      } else if (lx < 3 || lx > 28) c = lx < 3 ? QUILT[1] : QUILT[3];
+      else c = QUILT[2];
+      // the check pattern
+      if ((lx % 6 === 3) && y >= 19) c = mix(c, QCHK, 0.55);
+      if (y === 22 || y === 25) c = mix(c, QCHK, 0.45);
+      if ((y < 19) && (lx % 6 === 3 || y === 8 || y === 13)) c = mix(c, QCHK, 0.45);
+      if (y >= 19 && (lx % 6 === 4) && (y === 21 || y === 24)) c = QCHK2;
+      px.set(x, y, c);
+    }
+    // the hem lit along the bottom edge, shade under the table edge
+    for (let x = 0; x < 36; x++) { if (inQuilt(x, 28)) px.set(x, 28, QUILT[4]); if (inQuilt(x, 19)) px.set(x, 19, QUILT[4]); if (inQuilt(x, 20)) px.set(x, 20, mix(px.get(x, 20), QUILT[4], 0.5)); }
+    // the table top board
+    const bx = O + 3, by = 5, bw = 26, bh = 12;
+    px.rect(bx, by, bw, bh, T[1]);
+    G.woodFill(px, bx, by + 1, bw, bh - 2, T[1], T[2], T[0], 17);
+    px.hline(bx, bx + bw - 1, by, T[2]);
+    px.hline(bx, bx + bw - 1, by + bh - 1, T[0]);
+    px.vline(bx, by, by + bh - 1, T[0]); px.vline(bx + bw - 1, by, by + bh - 1, T[2]);
+    px.rect(bx, by + bh, bw, 2, T[3]); px.hline(bx, bx + bw - 1, by + bh + 1, T[4]);
+    // sheen on the varnish
+    px.line(bx + 3, by + 9, bx + 7, by + 2, mix(T[0], C('#f0d8b0'), 0.4));
+    // a basket of mikan and a teacup
+    const OR = R('#ffcc66', '#f2a03a', '#d07a22', '#a05418', '#6a3610');
+    px.ellipse(bx + 16, by + 6.5, 5, 2.6, C('#8a6a3c')); px.ellipse(bx + 16, by + 6, 4, 1.8, C('#5a4426'));
+    for (const [mx, my] of [[bx + 14, by + 5], [bx + 18, by + 5], [bx + 16, by + 3]]) {
+      G.shadeDisc(px, mx, my, 1.9, OR[1], OR[0], OR[3]);
+      px.set(Math.floor(mx), Math.floor(my) - 1, C('#4a6a2a'));
+    }
+    px.rect(bx + 4, by + 3, 3, 3, C('#d8d4c4')); px.hline(bx + 4, bx + 6, by + 3, C('#5a7040')); px.set(bx + 6, by + 5, C('#a8a496')); px.set(bx + 4, by + 3, C('#7a9050'));
+    px.outline();
+    if (glow) {
+      // the heater under the table lights the hem from inside, red-orange, and spills onto the floor
+      const a = glow === 2 ? 0.34 : 0.26;
+      for (let x = 0; x < 36; x++) for (let y = 25; y <= 28; y++) if (inQuilt(x, y)) px.set(x, y, mix(px.get(x, y), C('#ff6a2a'), (y - 24) * (glow === 2 ? 0.09 : 0.07)));
+      halo(px, 18, 29.5, 19, 3.2, '#ff5a22', a, (i, j) => j >= 28);
+    }
+    floorShadow(px, 18, 29.5, 17, 1.6, SHADOW2);
+    return fr(px, 18, 32);
+  }
+  def('kotatsu', () => kotatsu(0));
+  def('kotatsu_on', () => [kotatsu(1), kotatsu(2)], 2);
+
+  // ---- futon laid out on the tatami (1x2 floor), and one with someone under it ----
+  const SHEET = R('#f4f0e6', '#e2dccf', '#c8c0b0', '#a49c8c', '#7e786a');
+  const FBLUE = R('#a8bcd8', '#7f98c0', '#5f78a2', '#465a80', '#30405e');
+  function futon(lump) {
+    const px = new G.PX(16, 32);
+    // the mattress (shikibuton), thick white edge at the front
+    px.rect(1, 1, 14, 29, SHEET[1]);
+    px.vline(1, 2, 28, SHEET[0]); px.vline(14, 2, 28, SHEET[2]);
+    px.hline(2, 13, 1, SHEET[0]);
+    px.rect(1, 29, 14, 2, SHEET[2]); px.hline(2, 13, 30, SHEET[3]);
+    px.set(1, 1, 0); px.set(14, 1, 0);
+    // pillow (buckwheat, white cover with a blue border)
+    px.rect(4, 2, 8, 5, C('#ece6d8'));
+    px.hline(4, 11, 2, SHEET[0]); px.hline(4, 11, 6, SHEET[3]); px.vline(11, 3, 6, SHEET[3]);
+    px.hline(5, 10, 4, C('#d6cfbe')); px.set(4, 2, 0); px.set(11, 2, 0);
+    px.vline(4, 3, 5, FBLUE[1]);
+    // the comforter (kakebuton): blue with a white kasuri pattern, the sheet folded back over the top
+    const top = lump ? 4 : 9;
+    px.rect(1, top, 14, 28 - top, FBLUE[2]);
+    for (let y = top + 3; y < 27; y++) for (let x = 2; x < 14; x++) {
+      if ((x + 2 * y) % 7 === 0 && y % 3 === 0) { px.set(x, y, FBLUE[0]); px.set(x + 1, y, FBLUE[1]); }
+    }
+    px.vline(1, top + 1, 27, FBLUE[1]); px.vline(14, top + 1, 27, FBLUE[3]);
+    px.hline(1, 14, 27, FBLUE[3]); px.hline(1, 14, 28, FBLUE[4]);
+    px.hline(1, 14, top, SHEET[0]); px.hline(1, 14, top + 1, SHEET[1]); px.hline(2, 13, top + 2, SHEET[3]);
+    px.set(1, top, SHEET[1]); px.set(14, top, SHEET[2]); px.set(14, top + 1, SHEET[3]);
+    px.outline();
+    return { px: px, top: top };
+  }
+  def('futon', () => { const f = futon(false); return fr(f.px, 8, 32); });
+  def('futon_lump', () => frames(4, (k) => {
+    const f = futon(true), px = f.px;
+    // the shape of someone curled up underneath, the cover pulled right over the pillow;
+    // breathing: the lit ridge rises 1px and the shadow on its flank deepens (0, 1, 1, 0)
+    const b = [0, 1, 1, 0][k];
+    for (let y = 5; y < 27; y++) for (let x = 2; x < 14; x++) {
+      const dx = (x + 0.5 - 7.6) / 5.2, dy = (y + 0.5 - 15.5 + b * 0.5) / (10.5 + b * 0.6);
+      const d = dx * dx + dy * dy;
+      if (d > 1) continue;
+      const l = -dx * 0.75 - dy * 0.45;
+      let c = px.get(x, y);
+      if (l > 0.35) c = mix(c, FBLUE[0], 0.55);
+      else if (l > 0.05) c = mix(c, FBLUE[1], 0.5);
+      else if (l < -0.45) c = mix(c, FBLUE[4], 0.55 + b * 0.1);
+      else if (l < -0.2) c = mix(c, FBLUE[3], 0.5);
+      px.set(x, y, c);
+    }
+    // a crease where the head is, under the cover near the pillow
+    px.hline(5, 9, 7 - b, mix(FBLUE[3], FBLUE[2], 0.4));
+    return fr(px, 8, 32);
+  }), 2);
+
+  // ---- chabudai: round low table with a tea set (2x1) ----
+  def('chabudai', () => {
+    const px = new G.PX(32, 22);
+    const W = R('#c08a5a', '#a46e42', '#865530', '#663e22', '#462816');
+    // legs
+    for (const lx of [6, 24]) { px.rect(lx, 14, 2, 6, W[3]); px.set(lx, 14, W[2]); px.vline(lx + 1, 15, 19, W[4]); }
+    px.rect(15, 14, 2, 5, W[4]);
+    // rim (thickness) then the top
+    px.ellipse(16, 10, 14.5, 6.5, W[3]);
+    px.ellipse(16, 11, 14.5, 6.5, W[4]);
+    px.ellipse(16, 10, 14.5, 6.5, W[3]);
+    px.ellipse(16, 9, 14.5, 6.5, W[2]);
+    px.ellipse(16, 8.6, 13.5, 5.8, W[1]);
+    // a soft sheen across the varnish, lit from the top-left
+    for (let y = 3; y < 14; y++) for (let x = 3; x < 29; x++) {
+      const dx = (x + 0.5 - 11) / 7, dy = (y + 0.5 - 6) / 2.6;
+      if (dx * dx + dy * dy < 1 && px.get(x, y) === W[1]) px.set(x, y, G.bayer(x, y) < 0.5 ? W[0] : W[1]);
+    }
+    // tray, teapot (kyusu) with its side handle, two cups of green tea
+    px.ellipse(14, 9, 6, 2.6, C('#4a2e22')); px.ellipse(14, 8.6, 5.2, 2, C('#6a4432'));
+    const TP = R('#7a8a6a', '#5a6a4c', '#425038', '#2e3826', '#1e2418');
+    G.shadeDisc(px, 12, 7, 2.6, TP[1], TP[0], TP[3]);
+    px.hline(11, 13, 4, TP[2]); px.set(12, 3, TP[0]);
+    px.line(14, 7, 17, 5, TP[2]); px.set(17, 5, TP[1]);   // the long side handle
+    px.set(9, 7, TP[2]); px.set(8, 6, TP[1]);              // spout
+    for (const [cx, cy] of [[17, 9], [21, 7]]) {
+      px.rect(cx, cy - 1, 3, 3, C('#d8d0c0')); px.hline(cx, cx + 2, cy - 1, C('#7a9040')); px.set(cx, cy - 1, C('#9ab060'));
+      px.vline(cx + 2, cy, cy + 1, C('#a49c8a'));
+    }
+    // a little dish of rice crackers
+    px.ellipse(23, 11, 2.6, 1.3, C('#e6e0d2')); px.set(22, 10, C('#c8964e')); px.set(24, 11, C('#b07a3a')); px.set(23, 10, C('#d8a860'));
+    px.outline();
+    floorShadow(px, 16, 19.5, 13, 2);
+    return fr(px, 16, 22);
+  });
+
+  // ---- zabuton: floor cushion (1x1 floor) ----
+  def('zabuton', () => {
+    const px = new G.PX(16, 14);
+    const Z = R('#9a6a84', '#7c5068', '#623c52', '#4a2c3e', '#321e2a');
+    // puffy square: top surface and a thick front edge
+    px.rect(1, 1, 14, 10, Z[2]);
+    px.rect(2, 0, 12, 1, Z[1]); px.rect(0, 2, 1, 8, Z[1]); px.rect(15, 2, 1, 8, Z[3]);
+    px.rect(1, 11, 14, 2, Z[3]); px.hline(2, 13, 12, Z[4]);
+    // swelling toward the middle, lit from the top-left
+    for (let y = 1; y < 11; y++) for (let x = 1; x < 15; x++) {
+      const dx = (x + 0.5 - 7) / 6.5, dy = (y + 0.5 - 5) / 5;
+      const d = dx * dx + dy * dy;
+      if (d < 0.35) px.set(x, y, Z[0]);
+      else if (d < 0.8) px.set(x, y, Z[1]);
+    }
+    // a subtle woven pattern and the centre tufts
+    for (let y = 2; y < 10; y += 3) for (let x = 2 + (y % 2); x < 14; x += 4) px.set(x, y, mix(px.get(x, y), Z[3], 0.4));
+    px.set(7, 5, C('#d8c088')); px.set(8, 6, C('#d8c088')); px.set(8, 5, C('#a88a50')); px.set(7, 6, C('#a88a50'));
+    // corner tassels
+    px.set(1, 1, Z[1]); px.set(14, 1, Z[2]); px.set(0, 11, Z[3]); px.set(15, 11, Z[4]);
+    px.outline();
+    return fr(px, 8, 15);
+  });
+
+  // ---- butsudan: small black-lacquer family altar, photo, two candles (1x1, frames 2) ----
+  def('butsudan', () => frames(4, (k) => {
+    const px = new G.PX(18, 31);
+    const L = LACQ;
+    const GD = GOLD;
+    // base drawer
+    px.rect(1, 24, 16, 6, L[2]); px.hline(1, 16, 24, L[0]); px.vline(1, 25, 29, L[1]); px.vline(16, 25, 29, L[3]); px.hline(1, 16, 29, L[4]);
+    px.hline(7, 10, 27, GD[2]); px.set(7, 27, GD[1]);
+    // body
+    px.rect(2, 6, 14, 18, L[2]); px.vline(2, 6, 23, L[1]); px.vline(15, 6, 23, L[3]);
+    // the open doors folded back at the sides, gilt inside
+    px.vline(0, 7, 23, L[1]); px.vline(1, 7, 23, GD[3]); px.vline(16, 7, 23, GD[4]); px.vline(17, 7, 23, L[3]);
+    // crown
+    px.rect(1, 3, 16, 3, L[1]); px.hline(0, 17, 3, L[0]); px.hline(1, 16, 5, L[3]); px.hline(2, 15, 4, GD[3]);
+    px.set(8, 2, GD[2]); px.set(9, 2, GD[3]); px.set(8, 1, GD[1]);
+    // the gilt interior, dark at the back
+    px.rect(3, 7, 12, 16, C('#3a2c1a'));
+    px.hline(3, 14, 7, C('#5a4626')); px.vline(3, 8, 22, C('#4e3c20'));
+    // upper step with the photograph (a man in a dark suit, a black ribbon over the corners)
+    px.hline(3, 14, 15, GD[2]); px.hline(3, 14, 16, GD[4]);
+    px.rect(6, 8, 6, 7, C('#1c181c'));
+    px.rect(7, 9, 4, 5, C('#9a968c')); px.rect(8, 10, 2, 2, C('#c8c2b4')); px.rect(7, 12, 4, 2, C('#4a4650')); px.set(8, 9, C('#4a4448')); px.set(9, 9, C('#4a4448'));
+    px.set(6, 8, C('#000000')); px.set(11, 8, C('#000000')); px.set(7, 8, C('#2a2a2a'));
+    // lower step: incense burner with a stick, the bell on its cushion, the candles
+    px.hline(3, 14, 22, GD[3]);
+    px.rect(8, 19, 3, 3, GD[2]); px.hline(8, 10, 19, GD[0]); px.set(10, 21, GD[4]);
+    px.vline(9, 16, 18, C('#6a4a3a')); px.set(9, 16, C('#ff8a4a'));
+    px.rect(12, 20, 2, 2, C('#8a2a2a')); px.set(12, 19, GD[1]); px.set(13, 19, GD[3]);
+    for (const cx of [4, 14]) {
+      px.vline(cx, 18, 21, C('#f2ece0')); px.set(cx, 21, C('#c8c0b0'));
+      // flames flicker: a tall flame leaning one way, then the other
+      const lean = [0, 1, 0, -1][(k + (cx > 8 ? 1 : 0)) % 4];
+      px.set(cx, 17, GLOW[1]); px.set(cx + (lean > 0 ? 1 : lean < 0 ? -1 : 0), 16, GLOW[2]);
+      if (lean === 0) px.set(cx, 15, GLOW[3]);
+      px.set(cx, 17, GLOW[0]);
+    }
+    // a thread of incense smoke wandering up
+    const sw = [0, 1, 1, 0][k];
+    px.set(9 + sw, 14, C('#8a8478')); px.set(9 + sw, 13, C('#6e6a62')); px.set(10 - sw, 12, C('#5a5650'));
+    px.outline();
+    // candlelight on the gilt
+    spill(px, 4, 16, 3, 3, C('#ffd890'), 0.22);
+    spill(px, 14, 16, 3, 3, C('#ffd890'), 0.22);
+    floorShadow(px, 9, 30, 8, 1.3);
+    return fr(px, 9, 31);
+  }), 5);
+
+  // ---- 1970s wooden CRT television on legs (1x1), and the same showing static (frames 3) ----
+  function tv(k) {
+    const px = new G.PX(16, 28);
+    const W = R('#9a6e46', '#7e5634', '#664226', '#4c301a', '#321e10');
+    // rabbit-ear antenna
+    px.line(8, 5, 3, 0, C('#a8aeb4')); px.line(9, 5, 14, 1, C('#8a9096'));
+    px.set(3, 0, C('#d8dce0')); px.set(14, 1, C('#d8dce0'));
+    px.rect(7, 5, 3, 2, C('#2a2a2e')); px.set(7, 5, C('#4a4a50'));
+    // cabinet: top face then the front
+    box34(px, 0, 6, 16, 15, 3, W, W);
+    // the screen: rounded, a bulging dark glass
+    const sx = 2, sy = 10, sw = 9, sh = 8;
+    px.rect(sx - 1, sy - 1, sw + 2, sh + 2, C('#1c1a1c'));
+    px.rect(sx, sy, sw, sh, C('#2c3432'));
+    px.set(sx, sy, C('#1c1a1c')); px.set(sx + sw - 1, sy, C('#1c1a1c')); px.set(sx, sy + sh - 1, C('#1c1a1c')); px.set(sx + sw - 1, sy + sh - 1, C('#1c1a1c'));
+    if (k === undefined) {
+      vsteps(px, sx + 1, sy + 1, sw - 2, sh - 2, [C('#3e4846'), C('#323a38'), C('#262c2b')]);
+      px.line(sx + 1, sy + 3, sx + 3, sy + 1, C('#6a7a78')); px.set(sx + 1, sy + 2, C('#566664'));
+    } else {
+      // static: light grey noise, a brighter band rolling down the picture
+      const band = (k * 3) % sh;
+      for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+        if ((x === 0 || x === sw - 1) && (y === 0 || y === sh - 1)) continue;
+        const h = G.hash(x + k * 17, y + k * 31, 5);
+        let c = h < 0.25 ? C('#6e7270') : h < 0.55 ? C('#a2a6a4') : h < 0.85 ? C('#c4c8c6') : C('#e8ecea');
+        if (y === band || y === band + 1) c = mix(c, C('#f4f8f6'), 0.5);
+        if (x === 0 || y === 0 || x === sw - 1 || y === sh - 1) c = mix(c, C('#2c3432'), 0.4);
+        px.set(sx + x, sy + y, c);
+      }
+    }
+    // control panel: channel dial, volume knob, speaker grille
+    px.rect(12, 10, 3, 9, W[3]);
+    px.set(13, 11, C('#d8d0c0')); px.set(12, 11, C('#a8a090')); px.set(13, 12, C('#7a7268')); px.set(14, 11, C('#5a5248'));
+    px.set(13, 14, C('#c8c0b0')); px.set(13, 15, C('#6a6258'));
+    for (let y = 16; y <= 18; y++) px.set(13, y, y % 2 ? C('#2a1c12') : W[2]);
+    // brand plate
+    px.hline(4, 7, 19, GOLD[2]);
+    // legs (splayed)
+    px.line(2, 21, 1, 26, W[4]); px.line(13, 21, 14, 26, W[4]); px.vline(3, 21, 24, W[3]); px.vline(12, 21, 24, W[3]);
+    px.outline();
+    if (k !== undefined) {
+      // cold grey light from the picture
+      halo(px, 6.5, 14, 10, 9, '#c8d4d8', 0.14 + (k % 2) * 0.04);
+      spill(px, 6.5, 14, 7, 6, C('#d8e4e8'), 0.12);
+    }
+    floorShadow(px, 8, 27, 7, 1);
+    return fr(px, 8, 28);
+  }
+  def('tv_crt', () => tv());
+  def('tv_static', () => frames(3, (k) => tv(k)), 10);
+
+  // ---- black rotary phone on a little lace-covered stand (1x1), and ringing (frames 2) ----
+  function phone(k) {
+    const px = new G.PX(16, 27);
+    const W = DWOOD;
+    // the stand: a small table with a lower shelf
+    px.rect(2, 13, 12, 3, W[2]); px.hline(2, 13, 13, W[1]);
+    px.vline(3, 16, 25, W[3]); px.vline(12, 16, 25, W[3]); px.vline(4, 16, 25, W[4]); px.vline(13, 16, 25, W[4]);
+    px.hline(3, 13, 21, W[2]); px.hline(3, 13, 22, W[4]);
+    // phone directory on the shelf
+    px.rect(5, 19, 6, 2, C('#b8a878')); px.hline(5, 10, 19, C('#d8c898'));
+    // lace doily draped over the top, scalloped hem
+    px.rect(1, 11, 14, 3, C('#ece6d8'));
+    px.hline(1, 14, 11, C('#faf6ec'));
+    for (let x = 1; x <= 14; x++) { px.set(x, 14, x % 2 ? C('#ece6d8') : 0); if (x % 3 === 0) px.set(x, 12, C('#c8c0b0')); }
+    // the phone: black bakelite body, the dial on its sloping front
+    const B = R('#5a5660', '#3a3640', '#26232a', '#18161c', '#0e0c10');
+    px.rect(3, 6, 10, 6, B[2]);
+    px.hline(4, 11, 5, B[1]); px.vline(3, 6, 11, B[1]); px.vline(12, 6, 11, B[3]); px.hline(3, 12, 11, B[4]);
+    px.set(4, 6, B[0]);
+    // dial: a ring of finger holes around a white label
+    px.disc(8, 8.5, 2.6, C('#2e2b32'));
+    for (const [x, y] of [[6, 7], [7, 6], [9, 6], [10, 7], [10, 9], [6, 9], [7, 10]]) px.set(x, y, C('#8a8690'));
+    px.set(8, 8, C('#e8e2d4')); px.set(8, 9, C('#c8c0b0'));
+    // the handset on its cradle; when ringing it jumps and rattles
+    const lift = k === undefined ? 0 : k === 0 ? 2 : 1;
+    const tilt = k === undefined ? 0 : k === 0 ? 1 : -1;
+    const hy = 3 - lift;
+    px.set(4, 5, B[3]); px.set(11, 5, B[3]); // cradle prongs
+    for (let x = 2; x <= 13; x++) {
+      const y = hy + (tilt > 0 ? (x < 6 ? 0 : x < 10 ? 0 : 1) : tilt < 0 ? (x < 6 ? 1 : 0) : 0);
+      px.set(x, y, x === 2 ? B[1] : B[2]);
+      px.set(x, y + 1, (x < 4 || x > 11) ? B[3] : 0);
+      if (x === 2 || x === 13) px.set(x, y + 1, B[3]);
+    }
+    px.set(3, hy + (tilt < 0 ? 1 : 0), B[0]);
+    // coiled cord running down the side
+    for (let y = 9; y <= 16; y++) px.set(14 + (y % 2), y, C('#1e1c22'));
+    if (k !== undefined) {
+      // the bell rattling: little shake marks either side
+      const m = C('#e8e0c8');
+      if (k === 0) { px.set(0, 4, m); px.set(1, 3, m); px.set(15, 6, m); px.set(14, 7, m); }
+      else { px.set(0, 6, m); px.set(1, 7, m); px.set(15, 3, m); px.set(14, 2, m); }
+    }
+    px.outline();
+    floorShadow(px, 8, 26, 7, 1);
+    return fr(px, 8, 27);
+  }
+  def('phone', () => phone());
+  def('phone_ring', () => [phone(0), phone(1)], 10);
+
+  // ---- kerosene heater with its orange glow window (1x1, frames 2) ----
+  def('heater', () => frames(4, (k) => {
+    const px = new G.PX(16, 25);
+    const E = R('#e2e0d6', '#c6c4ba', '#a6a49a', '#86847a', '#62605a'); // cream enamel
+    // base ring (the tank), wider
+    px.rect(1, 19, 14, 4, C('#5a5a60')); px.hline(1, 14, 19, C('#7a7a80')); px.hline(2, 14, 22, C('#3a3a40')); px.vline(14, 20, 22, C('#46464c'));
+    px.set(11, 20, C('#e8d070')); px.set(12, 20, C('#2a2a2e'));   // fuel gauge
+    // the cylinder
+    px.rect(2, 7, 12, 12, E[2]);
+    for (let y = 7; y < 19; y++) { px.set(2, y, E[1]); px.set(3, y, E[0]); px.set(4, y, E[1]); px.set(12, y, E[3]); px.set(13, y, E[4]); }
+    // the glowing chimney window: a ring of flame behind a grid of bars
+    const flick = [0, 1, 2, 1][k];
+    for (let y = 9; y <= 15; y++) for (let x = 4; x <= 11; x++) {
+      const edge = x === 4 || x === 11;
+      let c = y < 11 ? GLOW[3] : y < 14 ? GLOW[2] : GLOW[1];
+      if ((x + y + flick) % 5 === 0 && y > 10) c = GLOW[1];
+      if (y === 14 && (x + flick) % 3 === 0) c = GLOW[0];
+      if (edge) c = GLOW[4];
+      px.set(x, y, c);
+    }
+    for (const bx of [6, 9]) px.vline(bx, 9, 15, C('#5a3a2a'));
+    px.hline(4, 11, 12, C('#6a4030'));
+    // top grille plate and handle
+    px.ellipse(8, 7, 6, 2, E[1]); px.ellipse(8, 7, 4.5, 1.2, C('#4a4a50'));
+    for (const x of [5, 7, 9, 11]) px.set(x, 7, C('#2a2a30'));
+    px.line(3, 6, 4, 2, C('#4a4a50')); px.line(12, 6, 11, 2, C('#4a4a50')); px.hline(4, 11, 1, C('#5a5a62')); px.hline(5, 10, 1, C('#7a7a84'));
+    px.outline();
+    // warm light on the floor in front and on the enamel around the window
+    spill(px, 8, 13, 6, 5, C('#ffb060'), 0.18 + flick * 0.04);
+    halo(px, 8, 22, 9 + flick * 0.5, 3, '#ff9a40', 0.2 + flick * 0.04, (i, j) => j >= 22);
+    floorShadow(px, 8, 23.5, 7, 1, SHADOW2);
+    return fr(px, 8, 25);
+  }), 6);
 })(window.G);

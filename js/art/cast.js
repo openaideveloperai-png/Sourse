@@ -58,16 +58,17 @@
     '...lffwwwffF....',
   ];
   const CAT_BACK = [
-    '...F.F....F.....',
-    '...FkF...FkF....',
-    '...ffffffffF....',
-    '..lfkfffkfffF...',
-    '..lffkfkfffFF...',
-    '...lfffffffF....',
-    '..lfkfffffkffF..',
-    '..lffkfkfkfffF..',
-    '..lffffffffffF..',
-    '...lfffffffFF...',
+    '..F.F....F......',
+    '..FkF...FkF.....',
+    '..lffffffff.....',
+    '.lLLffffffFF....',
+    '.lLfffffffFF....',
+    '..lfffffFFF.....',
+    '....lFFFFF......',
+    '...lffFfffF.....',
+    '..lLfFfFffFF....',
+    '..lffFFFffFF....',
+    '..lfFfFfFfFF....',
   ];
   function catPx() { return new G.PX(18, 14); }
   const cset = (px, x, y, c) => px.set(1 + x, 1 + y, c);
@@ -116,18 +117,17 @@
   }
   function catBackFrame(k) {
     const px = catPx(), bob = k ? 1 : 0;
+    // tail swinging out to the right side of the rump
+    catTail(px, [[[11, 9], [12, 8], [13, 7], [13, 6], [14, 5], [14, 4]], [[11, 9], [12, 8], [13, 7], [14, 6], [14, 5], [15, 4]], [[11, 9], [12, 8], [12, 7], [13, 6], [13, 5], [13, 4]]][k], bob);
+    if (!bob) { cset(px, 11, 10, CAT.F); }
     px.stamp(CAT_BACK, CAT, 1, 1 + bob);
     // hind legs; a lifted paw shows its pink pad
     const lift = [[0, 0], [0, 1], [1, 0]][k];
-    for (const [x, li] of [[4, lift[0]], [10, lift[1]]]) {
-      for (let y = 10 + bob; y < 11 - li; y++) { cset(px, x, y, CAT.f); cset(px, x + 1, y, CAT.F); }
-      cset(px, x, 11 - li, li ? CAT.p : CAT.F); cset(px, x + 1, 11 - li, li ? CAT.p : CAT.k);
+    for (const [x, li] of [[3, lift[0]], [9, lift[1]]]) {
+      for (let y = 11 + bob; y < 11 - li; y++) { cset(px, x, y, CAT.f); cset(px, x + 1, y, CAT.F); }
+      if (li) { cset(px, x, 10, CAT.p); cset(px, x + 1, 10, CAT.p); }
+      else { cset(px, x, 11, CAT.F); cset(px, x + 1, 11, CAT.k); }
     }
-    // tail raised over the back, swaying
-    catTail(px, [[[7, 9], [8, 8], [9, 7], [10, 6], [10, 5], [10, 4]], [[7, 9], [8, 8], [9, 7], [10, 6], [11, 5], [11, 4]], [[7, 9], [8, 8], [9, 7], [9, 6], [10, 5], [10, 4]]][k].map(([x, y], i) => [x, y]), bob);
-    // light edge on the tail so it separates from the back
-    const tp = [[[8, 8], [9, 7], [10, 6]], [[8, 8], [9, 7], [10, 6]], [[8, 8], [9, 7], [9, 6]]][k];
-    for (const [x, y] of tp) cset(px, x - 1, y + bob, CAT.L);
     px.outline();
     return G.frame(px, 9, 13);
   }

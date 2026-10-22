@@ -108,6 +108,8 @@
   let scene = null, fade = 0, fadeDir = 0, fadeCb = null, fadeSpeed = 2;
   G.setScene = (s) => { scene = s; };
   G.getScene = () => scene;
+  // true while the screen fades between scenes (retry, endings, title)
+  G.sceneFading = () => fadeDir !== 0;
   G.fadeTo = function (make, speed) {
     if (fadeDir === 1) return;
     fadeDir = 1;
@@ -290,9 +292,10 @@
     },
     // ---- chase-escape bot ----
     // Walks (never runs) through a route of targets while a chase is on and reports if it survived.
-    // targets: ['doorId', {hide: 'objId'}, {tile: [x, y]}, {wait: s}, ...]; each door target must be
-    // in the room the bot is in when it gets to it. opts: {latch: true} latches chain doors when asked,
-    // {max: seconds} time limit, {until: 'chaseEnd'|'route'}.
+    // targets: ['doorId', {hide: 'objId'}, {latch: 'doorId'}, {tile: [x, y]}, {wait: s}, ...]; each
+    // door target must be in the room the bot is in when it gets to it. {latch: id} chains that door
+    // (the one he is coming through) without going through it. opts: {latch: true} latches chain
+    // doors when asked on the way, {max: seconds} time limit, {until: 'chaseEnd'|'route'}.
     escape(targets, opts) {
       opts = opts || {};
       const TS = G.TS, q = targets.slice();
@@ -315,7 +318,7 @@
               const opt = G.Dialog.choice.options.map(String);
               let pick = 0;
               const li = opt.findIndex((o) => /latch/i.test(o));
-              if (li >= 0) pick = opts.latch ? li : opt.findIndex((o) => !/latch/i.test(o));
+              if (li >= 0) pick = opts.latch || this._wantLatch ? li : opt.findIndex((o) => !/latch/i.test(o));
               const yi = opt.findIndex((o) => /^yes|hide/i.test(o));
               if (li < 0 && yi >= 0) pick = yi;
               G.Dialog.choice.sel = Math.max(0, pick);
@@ -328,6 +331,7 @@
           if (G.EV.busy && !G.EX.p.hidden) { this.step(1); continue; }
           const ex = G.EX, room = ex.room, p = ex.p;
           if (!G.Chase.active && (opts.until !== 'route' || !q.length && !cur)) { if (p.hidden) { this.step(1, { ok: true, anyPress: true }); continue; } out.ok = true; say('chase over'); return out; }
+          if (!G.EV.busy) this._wantLatch = false;
           if (p.hidden) { this.step(1); continue; }
           if (!cur) {
             if (!q.length) { this.step(1); continue; }
@@ -337,15 +341,16 @@
           }
           if (cur.wait) { if (--waitT <= 0) cur = null; this.step(1); continue; }
           if (G.S.map !== curMap && typeof cur === 'string') { cur = null; continue; }
-          const id = typeof cur === 'string' ? cur : cur.hide;
+          if (cur.latch && !(G.Chase.active && G.Chase.active.away)) { say('too late to latch ' + cur.latch); cur = null; continue; }
+          const id = typeof cur === 'string' ? cur : cur.hide || cur.latch;
           let goal, face = null;
           if (cur.tile) goal = cur.tile;
           else {
             const o = room.obj(id);
             if (!o) { say('missing ' + id); out.err = 'missing ' + id + ' in ' + G.S.map; return out; }
-            const walk = o.def.door && o.def.door.walk;
+            const walk = o.def.door && o.def.door.walk && !cur.latch;
             const cands = [];
-            if (walk || !o.solid) for (let c = o.x; c < o.x + o.w; c++) for (let r = o.y; r < o.y + o.h; r++) cands.push([c, r, null]);
+            if ((walk || !o.solid) && !cur.latch) for (let c = o.x; c < o.x + o.w; c++) for (let r = o.y; r < o.y + o.h; r++) cands.push([c, r, null]);
             for (let c = o.x; c < o.x + o.w; c++) { cands.push([c, o.y + o.h, 'up']); cands.push([c, o.y - 1, 'down']); }
             for (let r = o.y; r < o.y + o.h; r++) { cands.push([o.x - 1, r, 'right']); cands.push([o.x + o.w, r, 'left']); }
             const pc = Math.floor(p.x / TS), pr = Math.floor((p.y - 2) / TS);
@@ -371,7 +376,7 @@
             if (face) {
               const fd = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] }[face];
               if (typeof cur === 'string') { this.step(1, { mx: fd[0], my: fd[1] }); this.step(1, { mx: fd[0], my: fd[1], ok: true, anyPress: true }); }
-              else { p.dir = face; this.step(1, { ok: true, anyPress: true }); cur = null; }
+              else { p.dir = face; this._wantLatch = !!cur.latch; this.step(1, { ok: true, anyPress: true }); cur = null; }
               continue;
             }
           }
@@ -382,7 +387,7 @@
         }
         say('time limit'); out.err = 'time limit';
         return out;
-      } finally { this.paused = false; }
+      } finally { this.paused = false; this._wantLatch = false; }
     },
     // run frames until nothing is happening: advances dialogue, answers choices with `picks`
     // (array of option indices, used in order, default 0), closes notes/pictures.
@@ -406,10 +411,10 @@
             this.step(1, { ok: true, anyPress: true });
             continue;
           }
-          if (G.EV.busy || (G.EX && G.EX.fade > 0 && G.EX.fadeDir)) { this.step(1); continue; }
+          if (G.EV.busy || fadeDir !== 0) { this.step(1); continue; }
           // a scene fade (title, endings) also counts as busy
           this.step(1);
-          if (!G.EV.busy && !G.Dialog.active && !G.UI.active) return { idle: true, frames: f };
+          if (!G.EV.busy && !G.Dialog.active && !G.UI.active && fadeDir === 0) return { idle: true, frames: f };
         }
         return { stuck: true };
       } finally { this.paused = was; }

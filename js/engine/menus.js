@@ -20,6 +20,13 @@
     ctx.fillRect(x + 2, y + 2, w - 4, 1);
   }
   G.panel = panel;
+  // one line of text that fits maxW px, with an ellipsis if it had to be cut
+  function fitLine(s, maxW) {
+    if (G.textWidth(s) <= maxW) return s;
+    while (s.length && G.textWidth(s + '...') > maxW) s = s.slice(0, -1);
+    return s.replace(/\s+$/, '') + '...';
+  }
+  G.fitLine = fitLine;
   function itemIcon(ctx, id, x, y) {
     const it = G.ITEMS[id];
     const name = (it && it.icon) || 'icon_' + id;
@@ -57,7 +64,7 @@
           }
           const it = G.ITEMS[id];
           G.Audio.sfx('select');
-          if (it && it.note) { UI.openNote(it, () => {}); return; }
+          if (it && it.note) { UI.openNote(it, () => {}, id); return; }
           if (it && it.use) { UI.pop(); G.EV.run(it.use); return; }
           UI.pop();
           G.EV.run(function* (E) { yield* E.say('@ ' + (it ? it.desc : id)); });
@@ -76,8 +83,8 @@
         ctx.fillStyle = '#2a2236'; ctx.fillRect(18, 32, W - 36, 1);
         const L = this.list();
         if (!L.length) { G.text(ctx, this.tab === 0 ? 'You have nothing.' : 'No notes yet.', 30, 46, { color: '#5a5466' }); }
-        const visible = 13;
-        const start = Math.max(0, Math.min(this.sel - 6, L.length - visible));
+        const visible = 11;
+        const start = Math.max(0, Math.min(this.sel - 5, L.length - visible));
         L.slice(start, start + visible).forEach((id, k) => {
           const i = k + start, y = 38 + k * 14;
           const sel = i === this.sel;
@@ -85,11 +92,13 @@
           let label;
           if (this.tab === 2) label = id === 'sound' ? 'Sound: ' + (G.Audio.muted ? 'OFF' : 'ON') : id === 'full' ? 'Fullscreen' : 'Quit to title';
           else { label = G.ITEMS[id] ? G.ITEMS[id].name : id; itemIcon(ctx, id, 22, y - 3); }
-          G.text(ctx, label, this.tab === 2 ? 30 : 42, y + 2, { color: sel ? '#ffffff' : '#a8a0b8', shadow: '#000' });
+          G.text(ctx, fitLine(G.clean(label), 140), this.tab === 2 ? 30 : 42, y + 2, { color: sel ? '#ffffff' : '#a8a0b8', shadow: '#000' });
+          // unread documents get a small dot
+          if (this.tab === 1 && !G.S.flags['@read:' + id]) { ctx.fillStyle = '#c890ff'; ctx.fillRect(184, y + 4, 2, 2); }
         });
         if (this.tab < 2 && L.length) {
           const it = G.ITEMS[L[this.sel]];
-          ctx.fillStyle = '#140e1c'; ctx.fillRect(200, 38, W - 226, H - 66);
+          ctx.fillStyle = '#140e1c'; ctx.fillRect(200, 38, W - 226, H - 82);
           if (it) {
             const name = (it.icon) || 'icon_' + L[this.sel];
             if (G.hasSprite(name)) {
@@ -97,20 +106,33 @@
               ctx.drawImage(s.c, Math.round(200 + (W - 226) / 2 - s.w), 48, s.w * 2, s.h * 2);
             }
             G.text(ctx, it.name, 210, 92, { color: '#ffffff', shadow: '#000' });
-            G.wrap(G.clean(it.desc || ''), W - 246).slice(0, 8).forEach((ln, k) => G.text(ctx, ln, 210, 108 + k * 12, { color: '#b8b0c8', shadow: '#000' }));
-            if (it.note) G.text(ctx, 'Z: read', 210, H - 40, { color: '#c890ff', shadow: '#000' });
-            else if (it.use) G.text(ctx, 'Z: use', 210, H - 40, { color: '#c890ff', shadow: '#000' });
+            G.wrap(G.clean(it.desc || ''), W - 246).slice(0, 6).forEach((ln, k) => G.text(ctx, ln, 210, 108 + k * 12, { color: '#b8b0c8', shadow: '#000' }));
+            if (it.note) G.text(ctx, 'Z: read', 210, H - 56, { color: '#c890ff', shadow: '#000' });
+            else if (it.use) G.text(ctx, 'Z: use', 210, H - 56, { color: '#c890ff', shadow: '#000' });
           }
         }
-        G.text(ctx, 'Time ' + G.fmtTime(G.S.time) + (G.S.chapter ? '   ' + G.S.chapter : ''), 26, H - 24, { color: '#5a5466', shadow: '#000' });
-        if (G.S.flags['@goal']) G.text(ctx, G.clean(G.S.flags['@goal']), W - 26, H - 24, { align: 'right', color: '#a890c0', shadow: '#000' });
+        // bottom bar: the goal on its own line; time + short chapter below (NOTES: G.NOTES_HEADER())
+        ctx.fillStyle = '#2a2236'; ctx.fillRect(18, H - 40, W - 36, 1);
+        if (G.S.flags['@goal']) G.text(ctx, fitLine(G.clean(G.S.flags['@goal']), W - 52), W - 26, H - 36, { align: 'right', color: '#a890c0', shadow: '#000' });
+        let hdr = null;
+        if (this.tab === 1 && G.NOTES_HEADER) { try { hdr = G.NOTES_HEADER(); } catch (e) { G.contentError('G.NOTES_HEADER', e); } }
+        if (hdr) G.text(ctx, fitLine(G.clean(String(hdr)), W - 52), 26, H - 24, { color: '#c890ff', shadow: '#000' });
+        else {
+          const chap = G.S.chapterShort || G.S.chapter;
+          G.text(ctx, fitLine('Time ' + G.fmtTime(G.S.time) + (chap ? '   ' + G.clean(chap) : ''), W - 52), 26, H - 24, { color: '#5a5466', shadow: '#000' });
+        }
       },
     };
     UI.push(p);
   };
 
   // ---------------- note reader ----------------
-  UI.openNote = function (it, done) {
+  // it: item object or id (id: the item id, marks the note read for E.notesCount)
+  UI.openNote = function (it, done, id) {
+    if (typeof it === 'string') { id = it; it = G.ITEMS[id]; }
+    if (!id && it) id = Object.keys(G.ITEMS).find((k) => G.ITEMS[k] === it);
+    if (!it) it = { name: id || '???', pages: ['(missing document ' + id + ')'] };
+    if (id) G.S.flags['@read:' + id] = true;
     G.Audio.sfx('paper');
     const pages = [];
     const maxW = W - 120;
@@ -141,18 +163,38 @@
   };
 
   // ---------------- picture viewer ----------------
+  // opts: {caption, scale, time (closes by itself after time s), glimpse (full screen on black),
+  //        morph: 'sprite2', morphTime: 2 (cross-fades into sprite2; Z works once it is done)}
   UI.openPicture = function (name, opts, done) {
+    opts = opts || {};
+    const morphT = opts.morphTime || 2;
+    const frameOf = (nm, t) => { const s = G.getSprite(nm); return s ? s.frames[Math.floor(t * s.fps) % s.frames.length] : null; };
     UI.push({
-      t: 0,
-      update(dt, inp) { this.t += dt; if (this.t > 0.3 && (inp.ok || inp.back)) { UI.pop(); done(); } },
+      t: 0, picture: name,
+      update(dt, inp) {
+        this.t += dt;
+        if (opts.time !== undefined) { if (this.t >= opts.time) { UI.pop(); done(); } return; }
+        if (this.t > (opts.morph ? morphT + 0.3 : 0.3) && (inp.ok || inp.back)) { UI.pop(); done(); }
+      },
       draw(ctx) {
-        ctx.fillStyle = 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, W, H);
-        const s = G.getSprite(name);
-        if (s) {
-          const f = s.frames[Math.floor(this.t * s.fps) % s.frames.length];
-          const sc = opts.scale || Math.max(1, Math.floor(Math.min((W - 40) / f.w, (H - 50) / f.h)));
-          ctx.drawImage(f.c, Math.round(W / 2 - (f.w * sc) / 2), Math.round(H / 2 - (f.h * sc) / 2 - 8), f.w * sc, f.h * sc);
-        }
+        ctx.fillStyle = opts.glimpse ? '#000' : 'rgba(0,0,0,0.85)'; ctx.fillRect(0, 0, W, H);
+        const place = (f) => {
+          const sc = opts.scale || (opts.glimpse ? Math.max(1, Math.floor(Math.min(W / f.w, H / f.h))) : Math.max(1, Math.floor(Math.min((W - 40) / f.w, (H - 50) / f.h))));
+          return [Math.round(W / 2 - (f.w * sc) / 2), Math.round(H / 2 - (f.h * sc) / 2 - (opts.glimpse ? 0 : 8)), f.w * sc, f.h * sc];
+        };
+        const f0 = frameOf(name, this.t);
+        if (!f0) { G.drawMissing(ctx, name, W / 2, H / 2 + 7); return; }
+        const r0 = place(f0);
+        if (opts.morph) {
+          const k = G.ease ? G.ease.out ? Math.min(1, this.t / morphT) : Math.min(1, this.t / morphT) : Math.min(1, this.t / morphT);
+          const f1 = frameOf(opts.morph, this.t);
+          if (!f1) { G.drawMissing(ctx, opts.morph, W / 2, H / 2 + 7); return; }
+          const r1 = place(f1);
+          const same = r0[0] === r1[0] && r0[1] === r1[1] && r0[2] === r1[2] && r0[3] === r1[3];
+          if (k < 1) { ctx.globalAlpha = same ? 1 : 1 - k; ctx.drawImage(f0.c, r0[0], r0[1], r0[2], r0[3]); }
+          ctx.globalAlpha = k; ctx.drawImage(f1.c, r1[0], r1[1], r1[2], r1[3]);
+          ctx.globalAlpha = 1;
+        } else ctx.drawImage(f0.c, r0[0], r0[1], r0[2], r0[3]);
         if (opts.caption) G.text(ctx, G.clean(opts.caption), W / 2, H - 22, { align: 'center', color: '#d8d2e2', shadow: '#000' });
       },
     });
@@ -482,7 +524,12 @@
         this.t += dt; this.lt += dt;
         if (this.i < lines.length) {
           if (inp.ok && this.lt > 0.6) { this.i++; this.lt = 0; }
-        } else if (inp.ok && this.lt > 1.5) { UI.stack = []; done(); G.fadeTo(() => new G.Title(), 0.8); }
+        } else if (inp.ok && this.lt > 1.5) {
+          UI.stack = []; done();
+          // retry endings (a quick bad end): back to the last checkpoint instead of the title
+          if (E.retry && (G.checkpointData || G.loadGame())) G.retry();
+          else G.fadeTo(() => new G.Title(), 0.8);
+        }
       },
       draw(ctx) {
         ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
@@ -502,20 +549,23 @@
         const total = Object.keys(G.ENDINGS || {}).length;
         if (total) G.text(ctx, 'Endings found: ' + seen.length + ' / ' + total, W / 2, 146, { align: 'center', color: '#8a8298', shadow: '#000' });
         if (E.hint) G.text(ctx, G.clean(E.hint), W / 2, 176, { align: 'center', color: '#6a5a7a', shadow: '#000' });
-        if (this.lt > 1.5 && Math.floor(this.t * 2) % 2) G.text(ctx, 'Press Z', W / 2, H - 20, { align: 'center', color: '#5a5466' });
+        if (this.lt > 1.5 && Math.floor(this.t * 2) % 2) G.text(ctx, E.retry ? 'Press Z to try again' : 'Press Z', W / 2, H - 20, { align: 'center', color: '#5a5466' });
       },
     });
   };
 
   // ---------------- save / load ----------------
   const SAVE = 'horror_save_v1';
+  // refused (returns false) while something hunts the player: a save must never skip a chase
   G.saveGame = function () {
+    if (G.Chase.active) return false;
     const ex = G.EX;
     G.S.x = Math.floor(ex.p.x / G.TS);
     G.S.y = Math.floor((ex.p.y - 2) / G.TS);
     G.S.dir = ex.p.dir;
     try { localStorage.setItem(SAVE, JSON.stringify({ S: G.S, at: G.S.time })); } catch (e) { /* storage blocked */ }
     G.savedInMemory = G.snapshot();
+    return true;
   };
   G.loadGame = function () {
     try { const d = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (d) return d.S; } catch (e) { /* ignore */ }

@@ -171,7 +171,7 @@
     for (let y = Math.floor(cy - rad); y <= cy + rad; y++)
       for (let x = Math.floor(cx - rad); x <= cx + rad; x++) {
         const c = px.get(x, y);
-        if (!(c >>> 24)) continue;
+        if (c >>> 24 !== 255) continue;
         const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / rad;
         if (d >= 1) continue;
         const t = (1 - d) * amt;
@@ -319,7 +319,7 @@
   def('drawing1', () => { // three cats
     const px = drawingBase(1, 14, 14), r = G.rng(11);
     for (let x = 1; x < 15; x++) cray(px, x, 14, CR.green, r);
-    crayCat(px, 4, 1, CR.orange, r, false);
+    crayCat(px, 2, 1, CR.orange, r, false);
     crayCat(px, 1, 8, CR.grey, r, false);
     crayCat(px, 9, 8, CR.black, r, true, CR.yellow);
     return drawingFinish(px, '1', CR.red);
@@ -731,41 +731,44 @@
     return fr(px, 8, 21);
   });
 
-  // top-loading washing machine (cream), 1970s; frames: shaking while it runs
+  // top-loading washing machine (cream), a 1970s twin-tub; frames: shaking while it runs
   function washer(dx, dy, run, k) {
     const px = new G.PX(18, 26);
-    const W = R('#f2ecd8', '#ddd5bc', '#c2b89c', '#9c927a', '#746c58');
+    const W = R('#f4eedc', '#e2d9c0', '#c8bea2', '#a29880', '#7a725e');
+    const LID = R('#c8dce4', '#a6c0cc', '#86a2b0', '#68828e', '#4c606a'); // pale blue plastic lids
     const x = 1 + dx, y = 1 + dy;
-    // control panel at the back of the top
-    box(px, x, y, 16, 4, 2, R('#c8c4bc', '#aeaaa2', '#94908a', '#76726c', '#5a5652'));
-    px.set(x + 3, y + 2, TIN[2]); px.set(x + 4, y + 2, TIN[3]); // dial
-    px.set(x + 11, y + 2, CHROME[1]); px.set(x + 12, y + 2, CHROME[3]);
-    px.set(x + 7, y + 1, run ? C('#e8604a') : C('#6a4a44')); // power lamp
-    // top face with the lid
-    px.rect(x, y + 4, 16, 6, W[1]);
-    px.hline(x, x + 15, y + 4, W[0]);
+    // control panel at the back of the top, two dials and a lamp
+    box(px, x, y, 16, 4, 2, R('#d4d0c6', '#b8b4aa', '#9c988e', '#7e7a72', '#5e5a54'));
+    px.set(x + 3, y + 2, NAVY[1]); px.set(x + 4, y + 2, NAVY[3]);
+    px.set(x + 12, y + 2, NAVY[1]); px.set(x + 13, y + 2, NAVY[3]);
+    px.set(x + 8, y + 1, run ? C('#f06a4a') : C('#6a4a44'));
+    // top face with two lids: the big wash tub and the small spinner
+    px.rect(x, y + 4, 16, 6, W[0]);
     px.vline(x + 15, y + 4, y + 9, W[2]);
-    sunk(px, x + 2, y + 5, 12, 4, W, W[1]);
-    px.hline(x + 6, x + 9, y + (run && k === 1 ? 7 : 8), CHROME[2]); // lid handle (rattles)
+    const lidRattle = run && k === 1 ? -1 : 0;
+    bevel(px, x + 1, y + 5 + lidRattle, 8, 4, LID);
+    bevel(px, x + 10, y + 5, 5, 4, LID);
+    px.hline(x + 3, x + 6, y + 7 + lidRattle, LID[3]); px.set(x + 12, y + 7, LID[3]);
     // front face
     px.rect(x, y + 10, 16, 13, W[2]);
     px.hline(x, x + 15, y + 10, W[1]);
     px.vline(x, y + 10, y + 22, W[1]);
     px.vline(x + 15, y + 10, y + 22, W[3]);
     px.hline(x + 1, x + 15, y + 22, W[4]);
-    // maker's badge and a thin chrome trim
-    px.hline(x + 1, x + 14, y + 12, CHROME[2]);
-    px.rect(x + 5, y + 14, 6, 2, NAVY[2]); px.hline(x + 6, x + 9, y + 14, NAVY[0]);
+    // pastel blue band, maker's badge, chrome trim
+    px.rect(x + 1, y + 12, 14, 3, LID[2]); px.hline(x + 1, x + 14, y + 12, LID[1]); px.hline(x + 1, x + 14, y + 14, LID[3]);
+    px.rect(x + 6, y + 13, 4, 1, CHROME[1]);
+    px.vline(x + 9, y + 16, y + 20, W[3]); // the line between the two tubs
     // kick plate and feet
-    px.rect(x + 1, y + 20, 14, 2, W[3]);
+    px.hline(x + 1, x + 14, y + 21, W[3]);
     px.set(x + 1, y + 23, W[4]); px.set(x + 14, y + 23, W[4]);
     grime(px, x, y + 17, 16, 6, C('#6a5a40'), 0.3, 0.6, 3, 3, 2);
     px.outline();
     if (run) {
       // rumble ticks beside it
       const t = C('#2a2430', 0.7);
-      if (k === 0) { px.set(0, 14, t); px.set(0, 16, t); }
-      if (k === 2) { px.set(17, 13, t); px.set(17, 15, t); }
+      if (k === 0) { px.set(0, 15, t); px.set(0, 17, t); }
+      if (k === 2) { px.set(17, 14, t); px.set(17, 16, t); }
     }
     floorShadow(px, 9, 25, 8.5, 1.4);
     return fr(px, 9, 26);
@@ -790,10 +793,10 @@
       // pull handle
       px.hline(ox + 3, ox + 6, oy + 3, CHROME[1]); px.set(ox + 2, oy + 3, CHROME[3]); px.set(ox + 7, oy + 3, CHROME[3]);
       px.hline(ox + 3, ox + 6, oy + 4, CHROME[4]);
-      // stencilled down arrow
-      const ax = ox + 4;
-      px.vline(ax, oy + 6, oy + 8, S[4]); px.vline(ax + 1, oy + 6, oy + 8, S[4]);
-      px.hline(ax - 1, ax + 2, oy + 9, S[4]); px.set(ax, oy + 10, S[4]); px.set(ax + 1, oy + 10, S[4]);
+      // stencilled yellow down arrow
+      const ax = ox + 4, AY = C('#d8b84a');
+      px.rect(ax, oy + 6, 2, 2, AY);
+      px.hline(ax - 2, ax + 3, oy + 8, AY); px.hline(ax - 1, ax + 2, oy + 9, AY); px.hline(ax, ax + 1, oy + 10, AY);
       // smudged hand prints around the handle
       grime(px, ox, oy + 1, ow, 5, C('#4a4040'), 0.25, 0.55, 12, 2, 2);
     } else {
@@ -932,8 +935,8 @@
     px.outline();
     if (on) {
       // red glow pulsing on the wall around it
-      halo(px, cx, fy + 3, k ? 13 : 12, C('#ff3a24'), k ? 0.5 : 0.42);
-      halo(px, cx, fy + 9, k ? 9 : 8, C('#ff2a1a'), 0.22);
+      halo(px, cx, fy + 3, k ? 14 : 13, C('#ff3020'), k ? 0.78 : 0.66);
+      halo(px, cx, fy + 12, k ? 10 : 9, C('#ff2a1a'), 0.3);
     }
     return wallF(px, 26);
   }
@@ -1023,15 +1026,18 @@
     const px = new G.PX(50, 36);
     const CL = R('#fbf8f2', '#ebe6dc', '#d4cec2', '#b0aa9e', '#88837a');
     const X = 1;
-    // cloth: top face (deep) and a draped front with folds and a scalloped hem
+    // cloth: top face (deep) and a draped front with soft folds and a lace hem
     px.rect(X, 4, 48, 20, CL[1]);
     px.hline(X, X + 47, 4, CL[0]);
-    for (let y = 5; y < 24; y++) if ((y * 7) % 11 < 2) px.hline(X + 1, X + 46, y, mix(CL[1], CL[2], 0.35));
+    px.vline(X + 47, 4, 23, CL[2]);
+    // faint creases from the folded cloth
+    px.hline(X + 2, X + 45, 13, mix(CL[1], CL[2], 0.4));
+    px.vline(X + 16, 5, 23, mix(CL[1], CL[2], 0.3)); px.vline(X + 32, 5, 23, mix(CL[1], CL[2], 0.3));
     px.rect(X, 24, 48, 9, CL[2]);
-    px.hline(X, X + 47, 24, CL[1]);
-    for (let x = X + 3; x < X + 47; x += 6) { px.vline(x, 25, 32, CL[3]); px.vline(x + 1, 25, 31, CL[1]); }
-    px.vline(X, 24, 33, CL[1]); px.vline(X + 47, 4, 33, CL[3]);
-    for (let x = X; x < X + 48; x++) px.set(x, 33 + (((x + 1) >> 1) % 2), CL[3]);
+    px.hline(X, X + 47, 24, CL[0]);
+    for (const fx of [X + 6, X + 17, X + 30, X + 41]) { px.vline(fx, 26, 32, CL[3]); px.vline(fx - 1, 26, 31, CL[1]); }
+    px.vline(X, 24, 32, CL[1]); px.vline(X + 47, 24, 32, CL[3]);
+    for (let x = X; x < X + 48; x++) { px.set(x, 32, CL[3]); if (x % 3 !== 2) px.set(x, 33, CL[2]); }
     // table legs peeking under the cloth
     px.rect(X + 2, 34, 2, 2, DWOOD[2]); px.rect(X + 44, 34, 2, 2, DWOOD[3]);
     // paper plates (each with a fork) and paper cups
@@ -1040,33 +1046,34 @@
       px.ellipse(x, y + 0.2, 2.2, 1, CL[2]);
       px.set(x + 3, y, CHROME[2]); px.set(x + 3, y - 1, CHROME[1]);
     };
-    plate(8, 9); plate(8, 18); plate(42, 9); plate(42, 18);
+    plate(6, 8); plate(6, 19); plate(44, 8); plate(44, 19);
     const cup = (x, y, c) => { px.rect(x, y, 2, 3, c); px.set(x, y, lt(c, 0.4)); px.set(x + 1, y + 2, dk(c, 0.25)); };
-    cup(14, 6, C('#8ab0d8')); cup(35, 6, C('#e0a0b0')); cup(14, 16, C('#e0a0b0')); cup(35, 16, C('#8ab0d8'));
+    cup(11, 5, C('#8ab0d8')); cup(38, 5, C('#e0a0b0')); cup(10, 15, C('#e0a0b0')); cup(39, 15, C('#8ab0d8'));
     // a striped party hat lying on its side
-    px.poly([[16, 21], [21, 19], [21, 23]], C('#e8c860'));
-    px.set(18, 21, C('#c86a82')); px.set(20, 20, C('#c86a82')); px.set(20, 22, C('#c86a82'));
-    // the cake: two-tier round, iced, with pink letters HARU on the top
-    const cx = 25.5;
-    px.ellipse(cx, 19, 10.5, 4, ICING[3]); // board shadow
-    px.rect(15, 11, 22, 8, ICING[2]);
-    px.ellipse(cx, 19, 11, 3.2, ICING[2]);
-    // side shading: lit left, shaded right
-    for (let y = 11; y < 22; y++) for (let x = 14; x < 38; x++) {
+    px.poly([[5, 13], [10, 11], [10, 15]], C('#e8c860'));
+    px.set(7, 13, C('#c86a82')); px.set(9, 12, C('#c86a82')); px.set(9, 14, C('#c86a82'));
+    // the cake: round, iced, a pink piped border, HARU written on top
+    const cx = 25, ty = 12;
+    px.ellipse(cx, 21, 13.5, 3.2, C('#c8c2b8')); // cake board
+    px.rect(13, ty, 24, 8, ICING[2]);
+    px.ellipse(cx, ty + 8, 12, 3.4, ICING[2]);
+    for (let y = ty; y < ty + 12; y++) for (let x = 12; x < 38; x++) {
       if (px.get(x, y) !== ICING[2]) continue;
-      px.set(x, y, x < 18 ? ICING[1] : x > 33 ? ICING[3] : ICING[2]);
+      px.set(x, y, x < 16 ? ICING[1] : x > 33 ? ICING[3] : ICING[2]);
     }
-    // pink piping round the base and the top edge
-    for (let x = 16; x <= 35; x += 2) px.set(x, 19 + (x > 20 && x < 31 ? 1 : 0), PINK[1]);
-    px.ellipse(cx, 11, 11, 4.2, ICING[0]);
-    px.ellipse(cx, 11.4, 10, 3.4, ICING[1]);
-    for (let a = 0; a < 20; a++) {
-      const t = (a / 20) * Math.PI * 2;
-      px.set(Math.round(cx - 0.5 + Math.cos(t) * 10.5), Math.round(11 + Math.sin(t) * 3.8), PINK[a % 2 ? 1 : 2]);
+    // a band of pink piping around the side
+    for (let x = 13; x <= 36; x++) { const yy = ty + 6 + Math.round(Math.sqrt(Math.max(0, 1 - ((x + 0.5 - cx) / 12) ** 2)) * 3); px.set(x, yy, (x % 2) ? PINK[1] : PINK[2]); }
+    px.ellipse(cx, ty, 12, 5, ICING[0]);
+    px.ellipse(cx + 0.5, ty + 0.4, 11, 4.2, ICING[1]);
+    px.ellipse(cx, ty - 0.3, 10.5, 3.8, ICING[0]);
+    // piped rosettes along the back rim and strawberries
+    for (let a = 0; a < 12; a++) {
+      const t = Math.PI + (a / 11) * Math.PI;
+      const rx = Math.round(cx - 0.5 + Math.cos(t) * 11), ry = Math.round(ty + Math.sin(t) * 4.4);
+      px.set(rx, ry, PINK[a % 2 ? 1 : 0]);
     }
-    // strawberries on the back rim
-    for (const sx of [18, 23, 28, 33]) { px.set(sx, 8, C('#c83a3a')); px.set(sx, 7, C('#5a8a4a')); }
-    text(px, 'HARU', 18, 9, (x, y) => (y < 11 ? PINK[1] : PINK[2]));
+    for (const sx of [17, 22, 28, 33]) { px.set(sx, ty - 3, C('#c83a3a')); px.set(sx, ty - 4, C('#5a8a4a')); px.set(sx + 1, ty - 3, C('#9a2a2a')); }
+    text(px, 'HARU', cx - 7, ty - 1, (x, y) => (y < ty + 1 ? PINK[2] : PINK[3]));
     px.outline();
     floorShadow(px, 25, 35, 24, 1.6);
     return fr(px, 25, 36);
@@ -1110,7 +1117,7 @@
     px.set(5, 23, ink); px.set(6, 22, ink); px.set(6, 23, ink); px.set(7, 23, ink); px.set(8, 22, ink); px.set(9, 23, ink); px.set(10, 23, ink); px.set(10, 22, ink);
     px.outline();
     if (lit) {
-      halo(px, cx, 4 + [0, -1, 1][k] * 0.5, [9, 8, 10][k], C('#ffb050'), [0.5, 0.42, 0.55][k]);
+      halo(px, cx, 4 + [0, -1, 1][k] * 0.5, [6.5, 6, 7][k], C('#ffc060'), [0.42, 0.36, 0.46][k]);
       lightOn(px, cx, 5, 9, C('#ffd890'), 0.35);
     } else {
       // a wisp of smoke curling up
@@ -1170,11 +1177,12 @@
     return wallF(px, 20);
   });
 
-  // paper streamers and a hand-made banner: HAPPY BIRTHDAY / DECEMBER FRIENDS!
+  // paper streamers and a hand-made banner: HAPPY BIRTHDAY, with a sign below: DECEMBER FRIENDS!
   def('streamers', () => {
-    const px = new G.PX(50, 26);
+    const px = new G.PX(58, 30);
     const ink = [CR.red, CR.blue, CR.green, CR.orange, CR.purple];
-    // crepe streamers: two twisted swags across the top, hanging tails at the ends
+    const ccol = (s) => { let n = 0; return () => ink[n++ % ink.length]; };
+    // crepe streamers: twisted swags across the top, tails at the ends
     const swag = (x0, x1, y0, depth, c1, c2) => {
       for (let x = x0; x <= x1; x++) {
         const t = (x - x0) / (x1 - x0);
@@ -1182,33 +1190,39 @@
         px.set(x, y, x % 3 === 0 ? c2 : c1); px.set(x, y + 1, x % 3 === 1 ? c2 : dk(c1, 0.15));
       }
     };
-    swag(1, 25, 1, 5, C('#f0b0c0'), C('#d08098'));
-    swag(24, 48, 1, 5, C('#a8c8e8'), C('#7a9ac0'));
-    swag(1, 48, 0, 3, C('#f0e090'), C('#c8b060'));
-    for (let y = 1; y < 22; y++) { px.set(1, y, y % 3 ? C('#f0b0c0') : C('#d08098')); px.set(48, y, y % 3 ? C('#a8c8e8') : C('#7a9ac0')); }
-    // banner: three sheets of drawing paper taped together
-    const by = 8, bh = 15;
-    px.rect(3, by, 44, bh, PAPER[0]);
-    px.hline(3, 46, by + bh - 1, PAPER[2]); px.vline(46, by, by + bh - 1, PAPER[1]);
-    for (const sx of [17, 32]) { px.vline(sx, by, by + bh - 1, PAPER[2]); tape(px, sx - 1, by - 1, 3, 2); tape(px, sx - 1, by + bh - 1, 3, 2); }
-    tape(px, 2, by - 1, 3, 2); tape(px, 45, by - 1, 3, 2);
-    // letters: alternating marker colours, no gaps so the long words fit
-    const line = (s, y) => {
-      let w = 0; for (const ch of s) w += ch === ' ' ? 2 : ch === 'I' || ch === '!' ? 1 : 3;
-      let x = 25 - Math.floor(w / 2), n = 0;
+    swag(3, 29, 0, 4, C('#f0b0c0'), C('#d08098'));
+    swag(28, 54, 0, 4, C('#a8c8e8'), C('#7a9ac0'));
+    for (let y = 3; y < 24; y++) { px.set(5, y, y % 3 ? C('#f0b0c0') : C('#d08098')); px.set(52, y, y % 3 ? C('#a8c8e8') : C('#7a9ac0')); }
+    // banner: two sheets of drawing paper taped together
+    const bx = 2, by = 5, bw = 54, bh = 9;
+    paperSheet(px, bx, by, bw, bh);
+    px.vline(bx + 27, by, by + bh - 1, PAPER[2]);
+    tape(px, bx + 26, by - 1, 3, 2); tape(px, bx - 1, by - 1, 3, 2); tape(px, bx + bw - 2, by - 1, 3, 2);
+    // letters, each in a different marker colour
+    const write = (s, x, y) => {
+      const next = ccol();
       for (const ch of s) {
-        if (ch === ' ') { x += 2; continue; }
         const g = glyph(ch, true);
-        const col = ink[n++ % ink.length];
+        if (!g) { x += 3; continue; }
+        const col = next();
         g.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') px.set(x + i, y + j, col); });
-        x += g[0].length;
+        x += g[0].length + 1;
       }
     };
-    line('HAPPY BIRTHDAY', by + 2);
-    line('DECEMBER FRIENDS!', by + 8);
+    const t1 = 'HAPPY BIRTHDAY';
+    write(t1, bx + Math.floor((bw - textW(t1, true)) / 2) + 1, by + 2);
+    // a smaller sign hanging under the banner on two strings
+    const sx = 11, sy = 16, sw = 36, sh = 12;
+    px.vline(sx + 5, by + bh, sy, C('#b8b0a0')); px.vline(sx + sw - 6, by + bh, sy, C('#b8b0a0'));
+    paperSheet(px, sx, sy, sw, sh, CREAM);
+    const t2 = 'DECEMBER', t3 = 'FRIENDS!';
+    write(t2, sx + Math.floor((sw - textW(t2, true)) / 2) + 1, sy + 1);
+    write(t3, sx + Math.floor((sw - textW(t3, true)) / 2) + 1, sy + 6);
+    // a crayon heart on each side of the sign
+    for (const hx of [sx + 1, sx + sw - 4]) { px.set(hx, sy + 4, CR.pink); px.set(hx + 2, sy + 5, CR.pink); px.hline(hx, hx + 2, sy + 5, CR.pink); px.set(hx + 1, sy + 6, CR.pink); }
     px.outline();
     wallDrop(px, 1, 1, C('#0a0612', 0.25));
-    return wallF(px, 26);
+    return wallF(px, 30);
   });
 
   // @@PART3
