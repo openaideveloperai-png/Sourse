@@ -319,8 +319,8 @@
   def('drawing1', () => { // three cats
     const px = drawingBase(1, 14, 14), r = G.rng(11);
     for (let x = 1; x < 15; x++) cray(px, x, 14, CR.green, r);
-    crayCat(px, 2, 2, CR.orange, r, false);
-    crayCat(px, 2, 8, CR.grey, r, false);
+    crayCat(px, 4, 1, CR.orange, r, false);
+    crayCat(px, 1, 8, CR.grey, r, false);
     crayCat(px, 9, 8, CR.black, r, true, CR.yellow);
     return drawingFinish(px, '1', CR.red);
   });
@@ -678,5 +678,538 @@
     return fr(px, 8, 9);
   });
 
-  // @@PART2
+  // =====================================================================
+  //  PIPES, RADIATOR, LAUNDRY ROOM
+  // =====================================================================
+  const PIPE = R('#dcd6c4', '#bcb6a4', '#9c9686', '#7c7668', '#5a564c'); // cream-painted iron
+  // a thick radiator pipe coming up out of the floor and running up the wall
+  def('pipe_floor', () => {
+    const px = new G.PX(16, 34);
+    cylV(px, 5, 0, 6, 31, PIPE);
+    // clamp ring holding it to the wall, and a joint collar
+    cylV(px, 4, 7, 8, 2, PIPE); px.hline(4, 11, 9, PIPE[4]);
+    cylV(px, 4, 19, 8, 3, PIPE); px.hline(4, 11, 19, PIPE[0]); px.hline(4, 11, 22, PIPE[4]);
+    px.set(6, 20, PIPE[0]);
+    // chipped paint with rust showing
+    for (const [x, y] of [[8, 4], [9, 13], [7, 26], [9, 27], [6, 15]]) { px.set(x, y, RUST[2]); px.set(x, y + 1, RUST[3]); }
+    px.set(10, 14, RUST[3]); px.vline(9, 23, 25, RUST[3]);
+    // floor escutcheon (round plate, seen in 3/4)
+    px.ellipse(8, 31.5, 6, 2.2, PIPE[2]);
+    px.hline(4, 11, 30, PIPE[1]); px.hline(3, 12, 31, PIPE[2]); px.hline(4, 11, 32, PIPE[3]);
+    cylV(px, 5, 28, 6, 3, PIPE);
+    px.outline();
+    floorShadow(px, 9, 32.5, 7, 1.3);
+    return fr(px, 8, 34);
+  });
+
+  // old ribbed cast-iron radiator, cream paint
+  def('radiator', () => {
+    const px = new G.PX(16, 21);
+    const RP = R('#e6e0cc', '#c8c2ae', '#a8a290', '#868070', '#625e52');
+    // back: dark gaps between the columns
+    px.rect(1, 4, 14, 12, C('#3a362e'));
+    // five columns, each a little rounded cylinder
+    for (let i = 0; i < 5; i++) {
+      const x = 1 + i * 3;
+      cylV(px, x, 3, 2, 14, [RP[0], RP[1], RP[3], RP[3], RP[4]]);
+      px.set(x, 2, RP[1]); px.set(x + 1, 2, RP[2]);
+      px.set(x, 3, RP[0]);
+    }
+    // the top/bottom headers that join the columns
+    cylH(px, 1, 4, 14, 2, [RP[1], RP[3]]);
+    cylH(px, 1, 14, 14, 2, [RP[2], RP[4]]);
+    for (let i = 0; i < 5; i++) { px.set(1 + i * 3, 4, RP[0]); }
+    // feet
+    px.rect(2, 17, 2, 2, RP[3]); px.rect(12, 17, 2, 2, RP[4]);
+    // valve knob and inlet pipe on the left
+    px.rect(0, 13, 1, 3, RP[2]); px.vline(0, 16, 19, PIPE[3]);
+    px.set(0, 12, C('#5a2a26')); px.set(-0, 11, C('#7a3a32'));
+    // scuffs and rust at the bottom
+    grime(px, 1, 12, 14, 5, RUST[3], 0.45, 0.55, 9, 2, 2);
+    px.outline();
+    floorShadow(px, 8, 19.5, 8, 1.4);
+    return fr(px, 8, 21);
+  });
+
+  // top-loading washing machine (cream), 1970s; frames: shaking while it runs
+  function washer(dx, dy, run, k) {
+    const px = new G.PX(18, 26);
+    const W = R('#f2ecd8', '#ddd5bc', '#c2b89c', '#9c927a', '#746c58');
+    const x = 1 + dx, y = 1 + dy;
+    // control panel at the back of the top
+    box(px, x, y, 16, 4, 2, R('#c8c4bc', '#aeaaa2', '#94908a', '#76726c', '#5a5652'));
+    px.set(x + 3, y + 2, TIN[2]); px.set(x + 4, y + 2, TIN[3]); // dial
+    px.set(x + 11, y + 2, CHROME[1]); px.set(x + 12, y + 2, CHROME[3]);
+    px.set(x + 7, y + 1, run ? C('#e8604a') : C('#6a4a44')); // power lamp
+    // top face with the lid
+    px.rect(x, y + 4, 16, 6, W[1]);
+    px.hline(x, x + 15, y + 4, W[0]);
+    px.vline(x + 15, y + 4, y + 9, W[2]);
+    sunk(px, x + 2, y + 5, 12, 4, W, W[1]);
+    px.hline(x + 6, x + 9, y + (run && k === 1 ? 7 : 8), CHROME[2]); // lid handle (rattles)
+    // front face
+    px.rect(x, y + 10, 16, 13, W[2]);
+    px.hline(x, x + 15, y + 10, W[1]);
+    px.vline(x, y + 10, y + 22, W[1]);
+    px.vline(x + 15, y + 10, y + 22, W[3]);
+    px.hline(x + 1, x + 15, y + 22, W[4]);
+    // maker's badge and a thin chrome trim
+    px.hline(x + 1, x + 14, y + 12, CHROME[2]);
+    px.rect(x + 5, y + 14, 6, 2, NAVY[2]); px.hline(x + 6, x + 9, y + 14, NAVY[0]);
+    // kick plate and feet
+    px.rect(x + 1, y + 20, 14, 2, W[3]);
+    px.set(x + 1, y + 23, W[4]); px.set(x + 14, y + 23, W[4]);
+    grime(px, x, y + 17, 16, 6, C('#6a5a40'), 0.3, 0.6, 3, 3, 2);
+    px.outline();
+    if (run) {
+      // rumble ticks beside it
+      const t = C('#2a2430', 0.7);
+      if (k === 0) { px.set(0, 14, t); px.set(0, 16, t); }
+      if (k === 2) { px.set(17, 13, t); px.set(17, 15, t); }
+    }
+    floorShadow(px, 9, 25, 8.5, 1.4);
+    return fr(px, 9, 26);
+  }
+  def('washer', () => washer(0, 0, false, 0));
+  def('washer_run', () => [washer(-1, 0, true, 0), washer(0, 1, true, 1), washer(1, 0, true, 2)], 12);
+
+  // laundry chute: a square steel hatch in the wall with a handle, darkness behind a gap
+  function chute(open) {
+    const px = new G.PX(16, 32);
+    const S = R('#b8bcc0', '#9a9ea4', '#80848c', '#646870', '#4a4e56');
+    // wall plate (frame), screwed on
+    bevel(px, 1, 7, 14, 19, S);
+    for (const [x, y] of [[2, 8], [13, 8], [2, 24], [13, 24]]) px.set(x, y, S[4]);
+    // the opening
+    const ox = 3, oy = 10, ow = 10, oh = 12;
+    px.rect(ox, oy, ow, oh, VOID);
+    if (!open) {
+      // the hatch: hinged at the bottom, not quite shut: a black gap along the top
+      bevel(px, ox, oy + 1, ow, oh - 1, R('#c4c8cc', '#a6aab0', '#8c9098', '#6e727a', '#50545c'));
+      px.hline(ox, ox + ow - 1, oy, VOID);
+      // pull handle
+      px.hline(ox + 3, ox + 6, oy + 3, CHROME[1]); px.set(ox + 2, oy + 3, CHROME[3]); px.set(ox + 7, oy + 3, CHROME[3]);
+      px.hline(ox + 3, ox + 6, oy + 4, CHROME[4]);
+      // stencilled down arrow
+      const ax = ox + 4;
+      px.vline(ax, oy + 6, oy + 8, S[4]); px.vline(ax + 1, oy + 6, oy + 8, S[4]);
+      px.hline(ax - 1, ax + 2, oy + 9, S[4]); px.set(ax, oy + 10, S[4]); px.set(ax + 1, oy + 10, S[4]);
+      // smudged hand prints around the handle
+      grime(px, ox, oy + 1, ow, 5, C('#4a4040'), 0.25, 0.55, 12, 2, 2);
+    } else {
+      // inside: the chute's top lip catches a little light, then nothing
+      px.hline(ox, ox + ow - 1, oy, S[3]);
+      px.hline(ox, ox + ow - 1, oy + 1, C('#2a2c32'));
+      px.hline(ox + 1, ox + ow - 2, oy + 2, C('#18191e'));
+      // the hatch folded down toward us (inside face, foreshortened)
+      for (let j = 0; j < 4; j++) {
+        const yy = oy + oh + j, xs = ox - (j >> 1), xe = ox + ow - 1 + (j >> 1);
+        px.hline(xs, xe, yy, j === 0 ? S[4] : j === 3 ? S[3] : S[1]);
+        px.set(xs, yy, S[2]); px.set(xe, yy, S[3]);
+      }
+      px.hline(ox + 3, ox + 6, oy + oh + 2, CHROME[3]); // the handle, now underneath
+    }
+    // rust dribbles from the frame
+    px.set(4, 26, RUST[2]); px.set(4, 27, RUST[3]); px.set(11, 26, RUST[3]);
+    px.outline();
+    return wallF(px, open ? 30 : 30);
+  }
+  def('chute', () => chute(false));
+  def('chute_open', () => chute(true));
+
+  // big wicker laundry basket full of sheets (hiding spot)
+  def('basket', () => {
+    const px = new G.PX(18, 19);
+    const WK = R('#d8b47a', '#bc9a60', '#9c7c48', '#7a5e34', '#564022');
+    // body: woven texture, slightly tapered
+    for (let y = 8; y <= 17; y++) {
+      const inset = y > 14 ? 1 : 0;
+      for (let x = 1 + inset; x <= 16 - inset; x++) {
+        const cell = ((x >> 1) + (y >> 1)) % 2;
+        let c = cell ? WK[2] : WK[1];
+        if (y % 2 === 1 && cell) c = WK[3];
+        if (x <= 2 + inset) c = cell ? WK[1] : WK[0];
+        if (x >= 15 - inset) c = cell ? WK[3] : WK[4];
+        px.set(x, y, c);
+      }
+    }
+    px.hline(2, 15, 17, WK[4]);
+    // rim
+    px.hline(1, 16, 7, WK[1]); px.hline(1, 16, 8, WK[3]); px.set(1, 7, WK[0]);
+    // handle holes
+    px.rect(3, 10, 2, 1, WK[4]); px.rect(13, 10, 2, 1, WK[4]);
+    // heap of sheets
+    const SH = WHITE;
+    px.ellipse(9, 6, 7.5, 4.2, SH[1]);
+    px.ellipse(7, 4.5, 4, 2.5, SH[0]);
+    px.ellipse(12, 5, 3, 2, SH[1]);
+    px.line(5, 7, 9, 5, SH[3]); px.line(11, 6, 14, 7, SH[3]); px.set(10, 3, SH[2]);
+    // a sheet corner hanging over the front
+    px.poly([[9, 7], [14, 7], [12.5, 13], [11, 12]], SH[1]);
+    px.line(12, 8, 12, 12, SH[3]); px.set(11, 11, SH[2]);
+    px.outline();
+    floorShadow(px, 9, 18, 8.5, 1.4);
+    return fr(px, 9, 19);
+  });
+
+  // a front-loading dryer with its lint trap drawer pulled out (grey fluff)
+  def('lint_trap', () => {
+    const px = new G.PX(16, 26);
+    const W = R('#ecebe4', '#d6d4cc', '#bab8b0', '#96948e', '#706e6a');
+    box(px, 0, 2, 16, 23, 4, W);
+    // control strip with a knob
+    px.hline(1, 14, 7, W[3]); px.set(3, 5, C('#5a5a64')); px.set(4, 5, C('#3a3a44'));
+    px.set(12, 5, C('#7a2a24'));
+    // round door: chrome ring and dark glass
+    px.disc(8, 15, 4.6, CHROME[2]);
+    px.disc(8, 15, 3.6, C('#22262e'));
+    px.set(6, 13, C('#5a6470')); px.set(7, 12, C('#4a525e')); px.set(6, 14, C('#3a424c'));
+    px.set(4, 12, CHROME[0]); px.set(5, 11, CHROME[1]); px.set(11, 18, CHROME[4]);
+    // lint drawer slot at the bottom, pulled out toward us with fluff
+    px.rect(3, 21, 10, 1, VOID2);
+    box(px, 3, 21, 10, 4, 2, R('#a8a8b0', '#8e8e98', '#76767e', '#5e5e66', '#46464e'));
+    px.rect(4, 21, 8, 1, C('#8a8690'));
+    px.set(5, 20, C('#a8a4ae')); px.set(6, 20, C('#9a96a0')); px.set(8, 20, C('#b0acb6')); px.set(9, 19, C('#a8a4ae')); px.set(10, 20, C('#8a8690'));
+    px.outline();
+    floorShadow(px, 8, 25.3, 8, 1.3);
+    return fr(px, 8, 26);
+  });
+
+  // a steel shelf with detergent and chemical bottles
+  def('shelf_bottles', () => {
+    const px = new G.PX(16, 32);
+    const S = STEEL;
+    // uprights
+    px.vline(0, 1, 31, S[1]); px.vline(1, 1, 31, S[3]);
+    px.vline(14, 1, 31, S[2]); px.vline(15, 1, 31, S[4]);
+    const shelf = (y) => { px.hline(0, 15, y, S[0]); px.hline(0, 15, y + 1, S[2]); px.hline(1, 14, y + 2, S[4]); };
+    // top shelf: box of detergent, a jug
+    px.rect(2, 3, 5, 6, C('#e8e4dc')); px.rect(2, 4, 5, 2, C('#4a7ab8')); px.set(3, 4, C('#e8604a')); px.vline(6, 3, 8, C('#b8b4ac'));
+    px.rect(8, 4, 5, 5, C('#dcd8c8')); px.rect(9, 3, 2, 1, C('#4a6ab0')); px.vline(12, 4, 8, C('#aaa69a')); px.set(8, 4, C('#f4f0e6'));
+    px.rect(9, 6, 3, 2, C('#e0a040'));
+    shelf(9);
+    // middle: brown glass developer bottle, green bottle, spray bottle
+    px.rect(2, 14, 3, 6, C('#5a3420')); px.rect(3, 12, 1, 2, C('#4a2a1a')); px.set(2, 14, C('#8a5a3a')); px.rect(2, 16, 3, 2, C('#e8e0c8'));
+    px.rect(6, 13, 3, 7, C('#3a6a4a')); px.set(7, 12, C('#2a4a34')); px.vline(6, 13, 19, C('#5a8a6a'));
+    px.rect(10, 15, 3, 5, C('#c8d8e8')); px.rect(10, 13, 2, 2, C('#c8483c')); px.set(12, 13, C('#c8483c')); px.vline(12, 15, 19, C('#98a8b8'));
+    shelf(20);
+    // bottom: a can, a bucket of something, rags
+    px.rect(2, 25, 4, 6, C('#8a8e96')); px.hline(2, 5, 25, C('#b8bcc4')); px.rect(2, 27, 4, 2, C('#c8a040'));
+    px.rect(7, 26, 7, 5, C('#c8b8a0')); px.set(8, 26, C('#e0d4c0')); px.hline(7, 13, 30, C('#9a8a74'));
+    px.set(9, 25, C('#7a8aa0')); px.set(10, 25, C('#8a9ab0'));
+    shelf(29);
+    px.outline();
+    return fr(px, 8, 32);
+  });
+
+  // =====================================================================
+  //  DARKROOM (303)
+  // =====================================================================
+  function safelight(on, k) {
+    const px = new G.PX(28, 30);
+    const H = R('#5a5650', '#45423e', '#34322f', '#262422', '#181716');
+    const cx = 14, top = 5;
+    // wall bracket and the cord running down
+    px.rect(cx - 1, top - 2, 2, 2, H[2]);
+    px.vline(cx + 4, top + 9, 29, C('#1c1a1a'));
+    // housing: a small box lamp tilted down, seen from the front
+    bevel(px, cx - 6, top, 12, 10, H);
+    px.hline(cx - 6, cx + 5, top, H[0]);
+    // filter window
+    const fx = cx - 4, fy = top + 2, fw = 8, fh = 6;
+    if (on) {
+      const RL = R('#ffd0b8', '#ff7a5a', '#e2382a', '#a81c18', '#6a0e10');
+      px.rect(fx, fy, fw, fh, RL[2]);
+      px.rect(fx + 1, fy + 1, fw - 2, fh - 2, RL[1]);
+      px.rect(fx + 2, fy + 1, 3, 2, RL[0]);
+      px.hline(fx, fx + fw - 1, fy + fh - 1, RL[3]);
+      if (k === 1) px.set(fx + 5, fy + 3, RL[0]);
+    } else {
+      px.rect(fx, fy, fw, fh, C('#3a1416'));
+      px.rect(fx + 1, fy + 1, 3, 1, C('#5a2224'));
+      px.hline(fx, fx + fw - 1, fy + fh - 1, C('#240c0e'));
+    }
+    px.outline();
+    if (on) {
+      // red glow pulsing on the wall around it
+      halo(px, cx, fy + 3, k ? 13 : 12, C('#ff3a24'), k ? 0.5 : 0.42);
+      halo(px, cx, fy + 9, k ? 9 : 8, C('#ff2a1a'), 0.22);
+    }
+    return wallF(px, 26);
+  }
+  def('safelight_off', () => safelight(false, 0));
+  def('safelight_on', () => [safelight(true, 0), safelight(true, 1)], 2);
+
+  // a table with three developing trays (developer / stop / fixer) and tongs
+  def('darkroom_tray', () => {
+    const px = new G.PX(32, 22);
+    const T = R('#d8dccc', '#bcc0b2', '#9ea296', '#7e8278', '#5e6058');
+    // table: top surface and front apron, legs
+    box(px, 0, 4, 32, 10, 7, R('#7a7e86', '#62666e', '#4e525a', '#3c4046', '#2a2d32'));
+    px.rect(1, 14, 2, 7, C('#3a3d44')); px.rect(29, 14, 2, 7, C('#2a2d32'));
+    px.hline(3, 28, 18, C('#2a2d32'));
+    // three trays, each a shallow box with liquid
+    const liquids = [C('#8a6a3a'), C('#9aa0a0'), C('#6a7a8a')];
+    for (let i = 0; i < 3; i++) {
+      const x = 1 + i * 10;
+      px.rect(x, 2, 10, 7, T[1]);
+      px.hline(x, x + 9, 2, T[0]); px.vline(x + 9, 3, 8, T[3]); px.hline(x, x + 9, 8, T[4]);
+      px.rect(x + 1, 3, 8, 4, liquids[i]);
+      px.hline(x + 1, x + 8, 3, dk(liquids[i], 0.25));
+      px.set(x + 2, 5, lt(liquids[i], 0.3)); px.set(x + 3, 5, lt(liquids[i], 0.2));
+    }
+    // a print floating in the first tray, tongs resting across the second
+    px.rect(3, 4, 4, 3, C('#d8d4c8')); px.rect(4, 5, 2, 1, C('#8a8478'));
+    px.line(13, 6, 18, 2, C('#c8b070')); px.line(14, 6, 19, 3, C('#a89050'));
+    px.outline();
+    floorShadow(px, 16, 21, 15, 1.5);
+    return fr(px, 16, 22);
+  });
+
+  // a string with hanging photographs (blank grey squares) and clothes pegs
+  def('photo_line', () => {
+    const px = new G.PX(32, 16);
+    const sag = (x) => 2 + Math.round(Math.sin((x / 31) * Math.PI) * 2);
+    for (let x = 0; x < 32; x++) px.set(x, sag(x), C('#c8c0b0'));
+    px.set(0, 1, STEEL[2]); px.set(31, 1, STEEL[2]); // hooks
+    const greys = [C('#a8a6a0'), C('#8a8884'), C('#b8b4ac'), C('#6e6c6a')];
+    [3, 11, 19, 26].forEach((x, i) => {
+      const y = sag(x + 2) + 1;
+      const h = i === 2 ? 8 : 7;
+      px.rect(x, y, 5, h, greys[i]);
+      px.hline(x, x + 4, y, lt(greys[i], 0.2));
+      px.vline(x + 4, y + 1, y + h - 1, dk(greys[i], 0.2));
+      if (i === 1) { px.set(x + 4, y + h - 1, dk(greys[i], 0.35)); px.set(x + 3, y + h - 1, dk(greys[i], 0.2)); } // curled corner
+      // faint image appearing on one of them
+      if (i === 3) { px.set(x + 2, y + 3, C('#4a4846')); px.rect(x + 1, y + 4, 3, 2, C('#5a5856')); }
+      // wooden peg
+      px.set(x + 2, y - 2, WOOD[1]); px.set(x + 2, y - 1, WOOD[2]); px.set(x + 2, y, WOOD[3]);
+    });
+    px.outline();
+    wallDrop(px, 1, 1, C('#0a0612', 0.25));
+    return wallF(px, 20);
+  });
+
+  // a photo enlarger on a bench
+  def('enlarger', () => {
+    const px = new G.PX(16, 32);
+    // bench
+    box(px, 0, 19, 16, 7, 4, DWOOD);
+    px.rect(1, 26, 2, 6, DWOOD[3]); px.rect(13, 26, 2, 6, DWOOD[4]);
+    // baseboard with a white easel
+    px.rect(2, 19, 12, 3, C('#2a2a30')); px.hline(2, 13, 19, C('#3e3e46'));
+    px.rect(3, 20, 6, 2, C('#e8e4d8')); px.hline(3, 8, 21, C('#c8b850'));
+    // column
+    px.vline(11, 1, 20, CHROME[1]); px.vline(12, 1, 20, CHROME[3]);
+    // head: lamp housing, bellows, lens
+    px.rect(3, 3, 8, 5, C('#2e2e34')); px.hline(3, 10, 3, C('#4a4a54')); px.vline(3, 4, 7, C('#3a3a42'));
+    px.rect(5, 1, 4, 2, C('#3a3a42')); px.hline(5, 8, 1, C('#56565e'));
+    px.rect(4, 8, 6, 4, C('#1e1c20'));
+    for (let y = 9; y <= 11; y += 2) px.hline(4, 9, y, C('#34323a'));
+    px.rect(6, 12, 2, 2, CHROME[2]); px.set(6, 12, CHROME[0]);
+    px.hline(9, 10, 5, CHROME[3]); px.set(10, 6, CHROME[2]);
+    px.outline();
+    floorShadow(px, 8, 31, 8, 1.4);
+    return fr(px, 8, 32);
+  });
+
+  // =====================================================================
+  //  THE BIRTHDAY PARTY (201)
+  // =====================================================================
+  const ICING = R('#fffaf4', '#f2e8de', '#dccabc', '#b8a294', '#8e7a70');
+  const PINK = R('#f8c0cc', '#e892a6', '#c86a82', '#9a4a62', '#6a3044');
+  // long table with a white cloth, paper plates and a big cake iced with pink letters
+  def('party_table', () => {
+    const px = new G.PX(50, 36);
+    const CL = R('#fbf8f2', '#ebe6dc', '#d4cec2', '#b0aa9e', '#88837a');
+    const X = 1;
+    // cloth: top face (deep) and a draped front with folds and a scalloped hem
+    px.rect(X, 4, 48, 20, CL[1]);
+    px.hline(X, X + 47, 4, CL[0]);
+    for (let y = 5; y < 24; y++) if ((y * 7) % 11 < 2) px.hline(X + 1, X + 46, y, mix(CL[1], CL[2], 0.35));
+    px.rect(X, 24, 48, 9, CL[2]);
+    px.hline(X, X + 47, 24, CL[1]);
+    for (let x = X + 3; x < X + 47; x += 6) { px.vline(x, 25, 32, CL[3]); px.vline(x + 1, 25, 31, CL[1]); }
+    px.vline(X, 24, 33, CL[1]); px.vline(X + 47, 4, 33, CL[3]);
+    for (let x = X; x < X + 48; x++) px.set(x, 33 + (((x + 1) >> 1) % 2), CL[3]);
+    // table legs peeking under the cloth
+    px.rect(X + 2, 34, 2, 2, DWOOD[2]); px.rect(X + 44, 34, 2, 2, DWOOD[3]);
+    // paper plates (each with a fork) and paper cups
+    const plate = (x, y) => {
+      px.ellipse(x, y, 3.6, 1.9, CL[0]);
+      px.ellipse(x, y + 0.2, 2.2, 1, CL[2]);
+      px.set(x + 3, y, CHROME[2]); px.set(x + 3, y - 1, CHROME[1]);
+    };
+    plate(8, 9); plate(8, 18); plate(42, 9); plate(42, 18);
+    const cup = (x, y, c) => { px.rect(x, y, 2, 3, c); px.set(x, y, lt(c, 0.4)); px.set(x + 1, y + 2, dk(c, 0.25)); };
+    cup(14, 6, C('#8ab0d8')); cup(35, 6, C('#e0a0b0')); cup(14, 16, C('#e0a0b0')); cup(35, 16, C('#8ab0d8'));
+    // a striped party hat lying on its side
+    px.poly([[16, 21], [21, 19], [21, 23]], C('#e8c860'));
+    px.set(18, 21, C('#c86a82')); px.set(20, 20, C('#c86a82')); px.set(20, 22, C('#c86a82'));
+    // the cake: two-tier round, iced, with pink letters HARU on the top
+    const cx = 25.5;
+    px.ellipse(cx, 19, 10.5, 4, ICING[3]); // board shadow
+    px.rect(15, 11, 22, 8, ICING[2]);
+    px.ellipse(cx, 19, 11, 3.2, ICING[2]);
+    // side shading: lit left, shaded right
+    for (let y = 11; y < 22; y++) for (let x = 14; x < 38; x++) {
+      if (px.get(x, y) !== ICING[2]) continue;
+      px.set(x, y, x < 18 ? ICING[1] : x > 33 ? ICING[3] : ICING[2]);
+    }
+    // pink piping round the base and the top edge
+    for (let x = 16; x <= 35; x += 2) px.set(x, 19 + (x > 20 && x < 31 ? 1 : 0), PINK[1]);
+    px.ellipse(cx, 11, 11, 4.2, ICING[0]);
+    px.ellipse(cx, 11.4, 10, 3.4, ICING[1]);
+    for (let a = 0; a < 20; a++) {
+      const t = (a / 20) * Math.PI * 2;
+      px.set(Math.round(cx - 0.5 + Math.cos(t) * 10.5), Math.round(11 + Math.sin(t) * 3.8), PINK[a % 2 ? 1 : 2]);
+    }
+    // strawberries on the back rim
+    for (const sx of [18, 23, 28, 33]) { px.set(sx, 8, C('#c83a3a')); px.set(sx, 7, C('#5a8a4a')); }
+    text(px, 'HARU', 18, 9, (x, y) => (y < 11 ? PINK[1] : PINK[2]));
+    px.outline();
+    floorShadow(px, 25, 35, 24, 1.6);
+    return fr(px, 25, 36);
+  });
+
+  // one tall birthday candle in a little holder, a folded paper name card in front (lit: flicker)
+  function cakeCandle(lit, k) {
+    const px = new G.PX(16, 28);
+    const cx = 8;
+    // candle: pastel with a spiral stripe
+    for (let y = 9; y <= 21; y++) {
+      px.set(cx - 1, y, C('#d8e4f4')); px.set(cx, y, C('#b8c8e0')); px.set(cx + 1, y, C('#8ea2c0'));
+      const s = (y + 0) % 4;
+      if (s === 0) px.set(cx - 1, y, C('#f0a0b4')); if (s === 1) px.set(cx, y, C('#d87a94')); if (s === 2) px.set(cx + 1, y, C('#b05a74'));
+    }
+    px.hline(cx - 1, cx + 1, 9, C('#eef2f8'));
+    // wax drip
+    px.set(cx - 1, 10, C('#eef2f8')); px.set(cx - 1, 11, C('#eef2f8'));
+    // holder: little brass dish
+    px.ellipse(cx, 22.5, 4, 1.6, GOLD[2]); px.hline(cx - 3, cx + 2, 22, GOLD[1]); px.hline(cx - 2, cx + 3, 23, GOLD[3]);
+    px.set(cx - 3, 22, GOLD[0]);
+    // wick
+    px.set(cx, 8, C('#2a2020'));
+    if (lit) {
+      const lean = [0, 1, 0][k], hgt = [0, -1, 1][k];
+      G.teardrop(px, cx, 5 + hgt * 0 + 1, 1.6, cx + lean, 1 + hgt, GLOW[3]);
+      G.teardrop(px, cx, 6, 1.0, cx + lean, 3 + hgt, GLOW[1]);
+      px.set(cx, 6, GLOW[0]);
+      px.set(cx, 7, C('#5a7ad0')); // blue root of the flame
+    } else {
+      px.set(cx, 7, C('#2a2020')); px.set(cx + 1, 6, C('#2a2020'));
+    }
+    // folded name card (tent) in front of the holder, with a handwritten name
+    px.rect(3, 21, 10, 5, PAPER[0]);
+    px.hline(3, 12, 21, PAPER[1]);
+    px.hline(3, 12, 25, PAPER[3]);
+    px.vline(12, 22, 25, PAPER[2]);
+    px.hline(4, 11, 20, PAPER[2]); // the back half of the fold peeking over
+    // the name: a short scribble of ink letters
+    const ink = C('#3a3048');
+    px.set(5, 23, ink); px.set(6, 22, ink); px.set(6, 23, ink); px.set(7, 23, ink); px.set(8, 22, ink); px.set(9, 23, ink); px.set(10, 23, ink); px.set(10, 22, ink);
+    px.outline();
+    if (lit) {
+      halo(px, cx, 4 + [0, -1, 1][k] * 0.5, [9, 8, 10][k], C('#ffb050'), [0.5, 0.42, 0.55][k]);
+      lightOn(px, cx, 5, 9, C('#ffd890'), 0.35);
+    } else {
+      // a wisp of smoke curling up
+      const sm = C('#c8c4d0', 0.55);
+      const wob = [0, 1, 2][k];
+      for (let y = 0; y < 7; y++) {
+        const x = cx + Math.round(Math.sin((y + wob) * 0.9) * 1.2) + (y < 3 ? 1 : 0);
+        if (!px.get(x, y)) px.set(x, y, y < 2 ? C('#c8c4d0', 0.3) : sm);
+      }
+    }
+    floorShadow(px, 8, 27, 6, 1.1, SHADOW2);
+    return fr(px, 8, 28);
+  }
+  def('cake_candle', () => [cakeCandle(true, 0), cakeCandle(true, 1), cakeCandle(true, 2)], 8);
+  def('cake_candle_out', () => [cakeCandle(false, 0), cakeCandle(false, 1), cakeCandle(false, 2)], 3);
+
+  // a birthday card on the floor
+  def('birthday_card', () => {
+    const px = new G.PX(14, 11);
+    // the card lies half open: inside page (white) and cover (pink) with a little cake
+    px.poly([[1, 3], [7, 1.5], [7.5, 9], [1.5, 9.5]], PAPER[1]);
+    px.poly([[7, 1.5], [13, 2.5], [12.5, 9.5], [7.5, 9]], PINK[1]);
+    px.line(7, 2, 7, 8, PINK[3]);
+    // cake on the cover
+    px.rect(9, 5, 3, 2, ICING[1]); px.hline(9, 11, 7, PINK[3]); px.set(10, 4, C('#fff0b0')); px.set(10, 3, GLOW[2]);
+    // handwriting inside
+    px.hline(2, 5, 4, C('#6a6078')); px.hline(2, 6, 6, C('#6a6078')); px.hline(3, 5, 8, C('#6a6078'));
+    px.outline();
+    floorShadow(px, 7, 9.8, 6.5, 1.2, SHADOW2);
+    return fr(px, 7, 11);
+  });
+
+  // four framed photos of children in a row (sepia / black-and-white)
+  def('family_photos', () => {
+    const px = new G.PX(33, 13);
+    const FR = R('#5a4636', '#46342a', '#36281f', '#271c16', '#1a120e');
+    const SEP = R('#e8dcc4', '#c8b898', '#a08c6c', '#6e5e48', '#3e342a');
+    for (let i = 0; i < 4; i++) {
+      const x = 1 + i * 8, y = i % 2 ? 2 : 1;
+      bevel(px, x, y, 7, 10, FR);
+      px.rect(x + 1, y + 1, 5, 8, SEP[0]);
+      // child: face, hair/cap, shoulders
+      const cx = x + 3;
+      px.rect(cx - 1, y + 4, 3, 2, SEP[1]); // face
+      px.set(cx - 1, y + 4, SEP[1]); px.set(cx, y + 5, SEP[2]);
+      px.rect(x + 1, y + 7, 5, 2, SEP[3]); // shoulders
+      if (i === 0) { px.rect(cx - 2, y + 2, 5, 2, SEP[4]); px.vline(cx - 2, y + 4, y + 6, SEP[4]); px.vline(cx + 2, y + 4, y + 6, SEP[4]); px.rect(x + 1, y + 7, 5, 2, SEP[2]); } // girl with a bob, pale dress
+      if (i === 1) { px.rect(cx - 2, y + 2, 5, 2, SEP[4]); px.hline(cx - 2, cx + 2, y + 3, SEP[3]); px.set(cx - 2, y + 4, SEP[4]); } // school cap
+      if (i === 2) { px.rect(cx - 1, y + 2, 4, 2, SEP[3]); px.hline(cx - 2, cx + 2, y + 3, SEP[4]); px.set(cx - 2, y + 4, SEP[3]); px.rect(x + 1, y + 7, 5, 2, SEP[2]); } // baseball cap
+      if (i === 3) { px.rect(cx - 1, y + 3, 3, 1, SEP[4]); px.set(cx - 1, y + 4, SEP[3]); px.rect(x + 2, y + 7, 3, 2, SEP[2]); } // small boy
+      px.set(cx - 1, y + 5, SEP[4]); px.set(cx + 1, y + 5, SEP[4]);
+      // glass glint
+      px.set(x + 5, y + 2, C('#ffffff'));
+    }
+    px.outline();
+    wallDrop(px, 1, 1, C('#0a0612', 0.3));
+    return wallF(px, 20);
+  });
+
+  // paper streamers and a hand-made banner: HAPPY BIRTHDAY / DECEMBER FRIENDS!
+  def('streamers', () => {
+    const px = new G.PX(50, 26);
+    const ink = [CR.red, CR.blue, CR.green, CR.orange, CR.purple];
+    // crepe streamers: two twisted swags across the top, hanging tails at the ends
+    const swag = (x0, x1, y0, depth, c1, c2) => {
+      for (let x = x0; x <= x1; x++) {
+        const t = (x - x0) / (x1 - x0);
+        const y = Math.round(y0 + Math.sin(t * Math.PI) * depth);
+        px.set(x, y, x % 3 === 0 ? c2 : c1); px.set(x, y + 1, x % 3 === 1 ? c2 : dk(c1, 0.15));
+      }
+    };
+    swag(1, 25, 1, 5, C('#f0b0c0'), C('#d08098'));
+    swag(24, 48, 1, 5, C('#a8c8e8'), C('#7a9ac0'));
+    swag(1, 48, 0, 3, C('#f0e090'), C('#c8b060'));
+    for (let y = 1; y < 22; y++) { px.set(1, y, y % 3 ? C('#f0b0c0') : C('#d08098')); px.set(48, y, y % 3 ? C('#a8c8e8') : C('#7a9ac0')); }
+    // banner: three sheets of drawing paper taped together
+    const by = 8, bh = 15;
+    px.rect(3, by, 44, bh, PAPER[0]);
+    px.hline(3, 46, by + bh - 1, PAPER[2]); px.vline(46, by, by + bh - 1, PAPER[1]);
+    for (const sx of [17, 32]) { px.vline(sx, by, by + bh - 1, PAPER[2]); tape(px, sx - 1, by - 1, 3, 2); tape(px, sx - 1, by + bh - 1, 3, 2); }
+    tape(px, 2, by - 1, 3, 2); tape(px, 45, by - 1, 3, 2);
+    // letters: alternating marker colours, no gaps so the long words fit
+    const line = (s, y) => {
+      let w = 0; for (const ch of s) w += ch === ' ' ? 2 : ch === 'I' || ch === '!' ? 1 : 3;
+      let x = 25 - Math.floor(w / 2), n = 0;
+      for (const ch of s) {
+        if (ch === ' ') { x += 2; continue; }
+        const g = glyph(ch, true);
+        const col = ink[n++ % ink.length];
+        g.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === '#') px.set(x + i, y + j, col); });
+        x += g[0].length;
+      }
+    };
+    line('HAPPY BIRTHDAY', by + 2);
+    line('DECEMBER FRIENDS!', by + 8);
+    px.outline();
+    wallDrop(px, 1, 1, C('#0a0612', 0.25));
+    return wallF(px, 26);
+  });
+
+  // @@PART3
 })(window.G);

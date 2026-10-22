@@ -85,6 +85,18 @@
       }
     }
   }
+  // clean vertical bands with a single checker row at each step (reads better than dither at 1x)
+  function vsteps(px, x, y, w, h, cols, mask) {
+    const n = cols.length;
+    for (let j = 0; j < h; j++) {
+      const i0 = Math.min(n - 1, Math.floor((j * n) / h));
+      const prev = j > 0 ? Math.min(n - 1, Math.floor(((j - 1) * n) / h)) : i0;
+      for (let i = 0; i < w; i++) {
+        if (mask && !mask(x + i, y + j)) continue;
+        px.set(x + i, y + j, prev !== i0 && (x + i + y + j) % 2 ? cols[prev] : cols[i0]);
+      }
+    }
+  }
   // blotchy grime: darken existing pixels where value noise is high
   function grime(px, x, y, w, h, col, amt, thr, seed, sx, sy) {
     for (let j = 0; j < h; j++)
@@ -681,38 +693,37 @@
   // one paper leaf, lacquered edge, x0 .. x0+w-1, y 3..30
   function fusumaLeaf(px, x0, w, pullX, seed) {
     const top = 3, bot = 30;
-    // paper, lighter at the top, a faint ink-wash range of hills across the lower third
-    vgrad(px, x0 + 1, top + 1, w - 2, bot - top - 1, [FPAPER[0], FPAPER[1], FPAPER[1], FPAPER[2]]);
-    for (let x = x0 + 1; x < x0 + w - 1; x++) {
-      const ridge = 21 + Math.round(Math.sin(x * 0.42) * 1.6 + Math.sin(x * 0.17 + 1) * 2.2);
-      for (let y = ridge; y < bot; y++) {
-        const t = (y - ridge) / 6;
-        if (t > G.bayer(x, y) * 0.9) px.set(x, y, y === ridge ? FPAPER[3] : mix(FPAPER[2], FPAPER[3], Math.min(1, t * 0.5)));
-      }
-      const far = 17 + Math.round(Math.sin(x * 0.3 + 2.3) * 1.5);
-      if (far < ridge - 1) { px.set(x, far, mix(FPAPER[1], FPAPER[2], 0.7)); }
-    }
+    // paper: lit from the top, yellowed toward the floor
+    vsteps(px, x0 + 1, top + 1, w - 2, bot - top - 1, [FPAPER[0], FPAPER[1], FPAPER[1], FPAPER[1], FPAPER[2]]);
     // karakami motif: little cloud marks on a staggered grid
-    for (let y = top + 3; y < 17; y += 5)
-      for (let x = x0 + 2 + ((y / 5) & 1) * 3; x < x0 + w - 2; x += 6) { px.set(x, y, FPAPER[2]); px.set(x + 1, y, FPAPER[2]); px.set(x + 1, y - 1, FPAPER[0]); }
-    // a few flecks of gold leaf
+    for (let y = top + 4; y < 18; y += 5)
+      for (let x = x0 + 2 + ((y / 5) & 1) * 3; x < x0 + w - 3; x += 6) {
+        px.set(x, y, FPAPER[2]); px.set(x + 1, y, FPAPER[2]); px.set(x + 1, y - 1, FPAPER[2]); px.set(x + 2, y, FPAPER[2]);
+      }
+    // a painted range of hills running across both leaves: far hills pale, near ones darker
+    for (let x = x0 + 1; x < x0 + w - 1; x++) {
+      const far = 19 + Math.round(Math.sin(x * 0.33 + 2.1) * 1.6 + Math.sin(x * 0.11) * 1.2);
+      const near = 23 + Math.round(Math.sin(x * 0.42) * 1.3 + Math.sin(x * 0.17 + 1) * 1.8);
+      for (let y = far; y < bot; y++) px.set(x, y, y === far ? mix(FPAPER[2], FPAPER[3], 0.35) : mix(FPAPER[1], FPAPER[2], 0.6));
+      for (let y = near; y < bot; y++) px.set(x, y, y === near ? FPAPER[3] : y > bot - 3 ? mix(FPAPER[2], FPAPER[3], 0.7) : mix(FPAPER[2], FPAPER[3], 0.35));
+    }
+    // two flecks of gold leaf
     const rnd = G.rng(seed);
-    for (let i = 0; i < 4; i++) px.set(x0 + 2 + rnd.int(w - 4), top + 2 + rnd.int(12), GOLD[1]);
+    for (let i = 0; i < 2; i++) px.set(x0 + 3 + rnd.int(w - 6), top + 3 + rnd.int(11), mix(GOLD[0], FPAPER[0], 0.3));
     // the lacquered frame
     px.hline(x0, x0 + w - 1, top, LACQ[1]);
     px.vline(x0, top, bot, LACQ[1]);
     px.vline(x0 + w - 1, top, bot, LACQ[3]);
     px.hline(x0, x0 + w - 1, bot, LACQ[3]);
     px.set(x0, top, LACQ[0]);
-    // shading: the right part of each leaf a touch darker
-    for (let y = top + 1; y < bot; y++) px.set(x0 + w - 2, y, mix(px.get(x0 + w - 2, y), FPAPER[4], 0.25));
-    // the round finger pull (hikite): gilt rim, dark lacquer inside
+    // the right edge of each leaf turns a touch away from the light
+    for (let y = top + 1; y < bot; y++) px.set(x0 + w - 2, y, mix(px.get(x0 + w - 2, y), FPAPER[4], 0.22));
+    // the oval finger pull (hikite): gilt rim, lacquer inside
     const py = 15;
-    px.set(pullX, py - 1, GOLD[1]); px.set(pullX + 1, py - 1, GOLD[2]);
-    px.set(pullX - 1, py, GOLD[1]); px.set(pullX + 2, py, GOLD[3]);
-    px.set(pullX - 1, py + 1, GOLD[2]); px.set(pullX + 2, py + 1, GOLD[3]);
-    px.set(pullX, py + 2, GOLD[3]); px.set(pullX + 1, py + 2, GOLD[4]);
-    px.set(pullX, py, LACQ[3]); px.set(pullX + 1, py, LACQ[4]); px.set(pullX, py + 1, LACQ[4]); px.set(pullX + 1, py + 1, LACQ[2]);
+    px.set(pullX, py - 1, GOLD[1]);
+    px.set(pullX - 1, py, GOLD[2]); px.set(pullX, py, LACQ[3]); px.set(pullX + 1, py, GOLD[3]);
+    px.set(pullX - 1, py + 1, GOLD[2]); px.set(pullX, py + 1, LACQ[2]); px.set(pullX + 1, py + 1, GOLD[3]);
+    px.set(pullX, py + 2, GOLD[3]);
   }
   // dark closet interior between x0..x1: the middle shelf (nakadana) and the floor board
   function closetInside(px, x0, x1) {
@@ -732,7 +743,7 @@
   def('fusuma', () => {
     const px = new G.PX(32, 32);
     fusumaFrame(px);
-    fusumaLeaf(px, 2, 15, 12, 3);
+    fusumaLeaf(px, 2, 15, 13, 3);
     // the right leaf runs in the front track: its edge throws a thin shadow on the left one
     px.vline(16, 4, 29, mix(FPAPER[3], LACQ[3], 0.4));
     fusumaLeaf(px, 16, 14, 18, 8);
@@ -807,8 +818,7 @@
     // the torn stubs of the months already gone
     px.set(2, 2, P[3]); px.set(5, 2, P[3]); px.set(11, 2, P[3]);
     // DEC / 1958
-    text(px, 'DEC', 1, 3, TEXT);
-    px.hline(13, 14, 5, C('#a04848'));
+    text(px, 'DEC', 2, 3, TEXT);
     textN(px, '1958', 1, 9, C('#5a525a'));
     px.hline(1, 14, 15, P[3]);
     // the days: Dec 1958 began on a Monday; Sundays in red
@@ -848,59 +858,60 @@
 
   // ---- old white enamel nameplate: 青木 (Aoki), chipped (1x1 wall) ----
   def('nameplate_enamel', () => {
-    const px = new G.PX(8, 18);
-    const E = R('#f4f4ee', '#e2e2da', '#c8c8c0', '#a2a29c', '#7a7a76');
-    px.rect(0, 0, 8, 18, E[1]);
-    vgrad(px, 0, 0, 8, 18, [E[0], E[1], E[1], E[2]]);
-    px.vline(0, 0, 17, E[0]); px.vline(7, 0, 17, E[3]); px.hline(0, 7, 17, E[3]);
+    const px = new G.PX(9, 19);
+    const E = R('#f4f4ee', '#e4e4dc', '#cacac2', '#a2a29c', '#7a7a76');
+    vsteps(px, 0, 0, 9, 19, [E[0], E[1], E[1], E[1], E[2]]);
+    px.vline(0, 1, 17, E[0]); px.vline(8, 1, 17, E[3]); px.hline(1, 8, 18, E[3]);
     // rounded corners
-    px.set(0, 0, 0); px.set(7, 0, 0); px.set(0, 17, 0); px.set(7, 17, 0);
-    // inner border line
-    const B = C('#2c3448');
-    px.hline(2, 5, 1, B); px.hline(2, 5, 16, B); px.vline(1, 2, 15, B); px.vline(6, 2, 15, B);
-    // 青
+    px.set(0, 0, 0); px.set(8, 0, 0); px.set(0, 18, 0); px.set(8, 18, 0);
+    // fine blue-black border line
+    const B = C('#3a4660');
+    px.hline(2, 6, 1, B); px.hline(2, 6, 17, B); px.vline(1, 2, 16, B); px.vline(7, 2, 16, B);
+    // 青 over 木 in black enamel
     const K = C('#18161c');
-    px.stamp(['..#..', '#####', '..#..', '.###.', '.#.#.', '.###.', '.#.#.', '.#.##'], { '#': K }, 1, 2);
-    // 木
-    px.stamp(['..#..', '#####', '.###.', '#.#.#', '..#..'], { '#': K }, 1, 11);
-    // screws
-    px.set(3, 0, STEEL[3]); px.set(4, 0, STEEL[3]);
-    // chips: dark iron showing through, rust around
-    for (const [x, y] of [[7, 5], [6, 5], [7, 6], [0, 13], [0, 14], [1, 14], [5, 17], [6, 17]]) px.set(x, y, C('#26242a'));
-    px.set(6, 6, RUST[2]); px.set(1, 13, RUST[2]); px.set(1, 15, RUST[3]); px.set(4, 17, RUST[2]);
-    px.set(0, 15, RUST[1]); px.set(0, 16, RUST[2]);
-    // crazing in the enamel
-    px.set(2, 10, E[2]); px.set(3, 10, E[2]); px.set(5, 10, E[3]);
+    px.stamp(['..#..', '#####', '..#..', '.###.', '.#.#.', '.###.', '.#.#.', '.#..#'], { '#': K }, 2, 3);
+    px.stamp(['..#..', '#####', '.###.', '#.#.#', '..#..'], { '#': K }, 2, 12);
+    // screw heads
+    px.set(4, 0, STEEL[2]); px.set(4, 18, STEEL[3]);
+    // chips knocked out of the enamel: dark iron, a halo of rust
+    px.set(8, 6, C('#26242a')); px.set(8, 7, C('#26242a')); px.set(7, 7, RUST[2]); px.set(8, 8, RUST[3]);
+    px.set(0, 14, C('#26242a')); px.set(1, 15, C('#26242a')); px.set(0, 15, RUST[2]); px.set(0, 16, RUST[3]);
     px.outline();
     drop(px, 1, 1, SHADOW2);
     return wallF(px, 21);
   });
 
   // ---- plug-in nightlight on the dado: the save point (1x1 wall, frames 4) ----
+  // a scallop-shell shade glowing from a little bulb at its base, plugged into the upper outlet of a
+  // double socket; the warm light breathes (0, 1, 2, 1) and loops without a jump
+  const SHELL = ['...####...', '..######..', '.########.', '##########', '##########', '.########.', '..######..'];
   def('nightlight', () => frames(4, (k) => {
-    const px = new G.PX(16, 15);
+    const px = new G.PX(16, 17);
     const lvl = [0, 1, 2, 1][k];
-    // the socket plate (cream bakelite) with a screw
-    px.rect(5, 4, 6, 9, CREAM[1]);
-    px.hline(5, 10, 4, CREAM[0]); px.vline(5, 5, 12, CREAM[0]); px.vline(10, 5, 12, CREAM[3]); px.hline(6, 10, 12, CREAM[3]);
-    px.set(7, 11, CREAM[3]); px.set(8, 11, CREAM[4]);
-    // the shell-shaped shade, glowing from the bulb at its base
-    const shell = ['..####..', '.######.', '########', '########', '.######.'];
-    px.stamp(shell, { '#': GLOW[3] }, 4, 3);
-    // ribs of the shell
-    for (const [x0, y0, x1, y1] of [[5, 7, 6, 4], [7, 7, 7, 3], [9, 7, 9, 3], [10, 7, 10, 4]]) px.line(x0, y0, x1, y1, GLOW[2]);
-    // brightness rises toward the bulb at the bottom middle
-    const core = [[7, 6], [8, 6], [7, 5], [8, 5], [6, 6], [9, 6]];
-    core.forEach(([x, y], i) => { if (i < 2 + lvl * 2) px.set(x, y, i < 2 ? GLOW[0] : GLOW[1]); });
-    px.set(7, 4, lvl > 0 ? GLOW[1] : GLOW[2]); px.set(8, 4, GLOW[2]);
-    px.set(4, 5, GLOW[4]); px.set(4, 6, GLOW[4]); px.set(11, 5, GLOW[4]); px.set(11, 6, GLOW[4]); px.set(5, 3, GLOW[3]);
-    // white plastic base plugged into the socket
-    px.hline(5, 10, 8, C('#e8e2d2')); px.hline(6, 9, 9, C('#c8c0ae')); px.set(10, 8, C('#b4ac9a'));
-    px.outline(C('#5a2a12'));
-    // warm light spilling on the wainscot around it, breathing
-    const a = 0.2 + lvl * 0.08, r = 6.5 + lvl * 0.6;
-    halo(px, 8, 6.5, r + 1.2, r * 0.95, '#ffb45a', a);
-    spill(px, 8, 9, 4, 4, C('#ffd08a'), 0.18 + lvl * 0.06);
+    // double socket plate (cream bakelite); the lower outlet shows two slots
+    const P = CREAM;
+    px.rect(4, 0, 8, 16, P[1]);
+    px.hline(4, 11, 0, P[0]); px.vline(4, 1, 15, P[0]); px.vline(11, 1, 15, P[3]); px.hline(5, 11, 15, P[3]);
+    px.set(7, 1, P[3]); px.set(8, 1, P[4]);
+    px.set(6, 12, P[4]); px.set(6, 13, P[4]); px.set(9, 12, P[4]); px.set(9, 13, P[4]);
+    px.set(7, 14, P[3]); px.set(8, 14, P[4]);
+    // the shell
+    px.stamp(SHELL, { '#': GLOW[3] }, 3, 2);
+    px.set(3, 4, GLOW[4]); px.set(12, 4, GLOW[4]);
+    // ribs fanning out from the base
+    for (const [x1, y1] of [[4, 5], [6, 3], [9, 3], [11, 5]]) px.line(x1 < 8 ? 7 : 8, 8, x1, y1, GLOW[2]);
+    // the glow: brightest just above the base, rising with the pulse
+    const lit = [[7, 7, 0], [8, 7, 0], [7, 6, 1], [8, 6, 1], [6, 7, 1], [9, 7, 1], [6, 6, 2], [9, 6, 2], [7, 5, 2], [8, 5, 2]];
+    for (const [x, y, need] of lit) if (need <= lvl + 1) px.set(x, y, need === 0 || (need === 1 && lvl === 2) ? GLOW[0] : GLOW[1]);
+    // cooler rim where the shell thins out, and its lit lip
+    px.set(3, 5, GLOW[4]); px.set(3, 6, GLOW[4]); px.set(12, 5, GLOW[4]); px.set(12, 6, GLOW[4]); px.set(4, 7, GLOW[4]); px.set(11, 7, GLOW[4]);
+    px.hline(5, 10, 8, GLOW[1]); px.set(5, 8, GLOW[2]); px.set(10, 8, GLOW[2]);
+    // the plug body under the lip
+    px.hline(6, 9, 9, C('#ece6d6')); px.set(9, 9, C('#c8c0ae'));
+    px.outline(C('#4a2410'));
+    // warm light on the wall around it, breathing
+    halo(px, 8, 6, 7.5 + lvl * 0.7, 6.5 + lvl * 0.6, '#ffb45a', 0.2 + lvl * 0.07);
+    spill(px, 8, 11, 4.5, 4.5, C('#ffcf8a'), 0.16 + lvl * 0.06);
     return wallF(px, 32);
   }), 4);
 
@@ -931,57 +942,56 @@
 
   // ---- corridor-side window: frosted glass behind a steel grille (1x1 wall) ----
   function frostedWindow(shadow) {
-    const px = new G.PX(16, 15);
+    const px = new G.PX(16, 20);
     // aluminium frame
-    px.rect(0, 0, 16, 14, ALU[2]);
-    px.hline(0, 15, 0, ALU[0]); px.vline(0, 1, 13, ALU[1]); px.vline(15, 1, 13, ALU[3]); px.hline(1, 15, 13, ALU[3]);
-    // frosted glass, lit dimly from inside (a light left on somewhere deep in the flat)
-    const G0 = C('#aeb2a6'), G1 = C('#969a90'), G2 = C('#7c8078'), G3 = C('#62665f');
-    for (let y = 1; y <= 11; y++)
+    px.rect(0, 0, 16, 18, ALU[2]);
+    px.hline(0, 15, 0, ALU[0]); px.vline(0, 1, 17, ALU[1]); px.vline(15, 1, 17, ALU[3]); px.hline(1, 15, 17, ALU[3]);
+    // frosted glass, lit warm and dim from a lamp left on somewhere inside
+    const FG = R('#e2d8b8', '#cfc4a2', '#b4aa8a', '#968e74', '#78725e');
+    for (let y = 1; y <= 16; y++)
       for (let x = 1; x <= 14; x++) {
-        const d = Math.hypot((x - 9) / 7, (y - 7) / 6);
-        const n = G.hash(x, y, 33) * 0.35 + d * 0.8;
-        px.set(x, y, n < 0.5 ? G0 : n < 0.8 ? G1 : n < 1.05 ? G2 : G3);
+        const d = Math.hypot((x - 9.5) / 8, (y - 8) / 9) + (G.bayer(x, y) - 0.5) * 0.16;
+        px.set(x, y, d < 0.4 ? FG[0] : d < 0.7 ? FG[1] : d < 0.96 ? FG[2] : FG[3]);
+        if (G.hash(x, y, 33) < 0.06) px.set(x, y, mix(px.get(x, y), FG[0], 0.5));
       }
-    // warm tint where the light is
-    spill(px, 9, 7, 5, 4, C('#d8c49a'), 0.35);
     if (shadow) {
-      // a tall figure standing right behind the glass: cap brim, head, broad shoulders
-      const S0 = C('#25222a'), S1 = C('#3a363c'), S2 = C('#555158');
+      // a tall figure right behind the glass: cap, brim, a pale blur where the mask is, shoulders
+      const S0 = C('#221f27'), S1 = C('#3a3540'), S2 = C('#6a6258'), MASK = C('#6c6870');
+      const hx = 8;
       const body = (x, y) => {
-        const hx = 8.5;
-        if (y <= 1) return Math.abs(x + 0.5 - hx) < 3.2;           // cap crown (cut off by the frame)
-        if (y === 2) return Math.abs(x + 0.5 - hx) < 4.6;          // brim
-        if (y <= 6) return Math.abs(x + 0.5 - hx) < 2.9;           // head
-        if (y === 7) return Math.abs(x + 0.5 - hx) < 2.2;          // neck
-        return Math.abs(x + 0.5 - hx) < 4 + (y - 8) * 1.4;         // shoulders
+        const dx = Math.abs(x + 0.5 - hx);
+        if (y < 1 || y > 16 || x < 1 || x > 14) return false;
+        if (y <= 3) return dx < 2.5;                 // cap crown, cut off by the frame
+        if (y === 4) return dx < 3.5;                // brim
+        if (y <= 8) return dx < 2.5 - (y === 8 ? 0.5 : 0);  // head
+        if (y === 9) return dx < 1.5;                // neck
+        return dx < 3 + (y - 10) * 2;                // shoulders sloping out of frame
       };
-      for (let y = 1; y <= 11; y++)
+      for (let y = 1; y <= 16; y++)
         for (let x = 1; x <= 14; x++) {
-          const inside = body(x, y);
-          const edge = !inside && (body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1));
-          if (inside) {
-            const e2 = !(body(x - 1, y) && body(x + 1, y) && body(x, y - 1) && body(x, y + 1));
-            px.set(x, y, e2 ? S1 : S0);
-          } else if (edge && G.bayer(x, y) < 0.6) px.set(x, y, mix(px.get(x, y), S2, 0.6));
+          if (body(x, y)) {
+            const rim = !(body(x - 1, y) && body(x + 1, y) && body(x, y - 1) && body(x, y + 1));
+            px.set(x, y, rim ? S1 : S0);
+          } else if (body(x - 1, y) || body(x + 1, y) || body(x, y + 1) || body(x, y - 1)) px.set(x, y, mix(px.get(x, y), S2, G.bayer(x, y) < 0.5 ? 0.75 : 0.45));
         }
+      for (const [x, y] of [[6, 7], [7, 7], [8, 7], [9, 7], [7, 8], [8, 8]]) px.set(x, y, MASK);
+      px.set(6, 6, S1); px.set(9, 6, S1);
     }
-    // steel grille in front: vertical bars with their shadows on the glass
-    const BAR = R('#9ea4a8', '#80868c', '#646a70', '#4a4f55', '#34383d');
-    for (const bx of [3, 6, 9, 12]) {
-      px.vline(bx, 1, 11, BAR[1]); px.set(bx, 1, BAR[0]);
-      px.vline(bx + 1, 2, 11, mix(px.get(bx + 1, 6), BAR[4], 0.35));
+    // steel grille in front: two bars and rails, each throwing a thin shadow on the glass
+    const BAR = R('#c0c6ca', '#9ea4aa', '#7e848a', '#5e6369', '#42464c');
+    for (const bx of [4, 11]) {
+      for (let y = 2; y <= 15; y++) px.set(bx + 1, y, mix(px.get(bx + 1, y), BAR[4], 0.35));
+      px.vline(bx, 1, 16, BAR[1]);
     }
-    px.hline(1, 14, 1, BAR[2]); px.hline(1, 14, 11, BAR[2]); px.hline(2, 14, 12, BAR[4]);
-    for (const bx of [3, 6, 9, 12]) { px.set(bx, 1, BAR[0]); px.set(bx, 11, BAR[1]); }
-    // the sash meeting stile and a crescent lock
-    px.vline(8, 2, 10, mix(ALU[3], G2, 0.3));
+    for (let x = 2; x <= 14; x++) px.set(x, 3, mix(px.get(x, 3), BAR[4], 0.3));
+    px.hline(1, 14, 2, BAR[1]); px.hline(1, 14, 15, BAR[2]);
+    for (const bx of [4, 11]) { px.set(bx, 2, BAR[0]); px.set(bx, 15, BAR[1]); }
     // concrete sill with a rust drip
-    px.rect(0, 13, 16, 2, CONC[1]); px.hline(0, 15, 13, CONC[0]); px.hline(1, 15, 14, CONC[3]);
-    dribble(px, 13, 14, 1, RUST);
+    px.rect(0, 18, 16, 2, CONC[1]); px.hline(0, 15, 18, CONC[0]); px.hline(1, 15, 19, CONC[3]);
+    dribble(px, 13, 19, 1, RUST);
     px.outline();
     drop(px, 1, 1, SHADOW2);
-    return wallF(px, 19);
+    return wallF(px, 21);
   }
   def('window_frosted', () => frostedWindow(false));
   def('window_frosted_shadow', () => frostedWindow(true));
@@ -993,29 +1003,25 @@
     px.rect(0, 0, 16, 15, FR[2]);
     px.hline(0, 15, 0, FR[0]); px.vline(0, 1, 14, FR[1]); px.vline(15, 1, 14, FR[3]); px.hline(1, 15, 14, FR[4]);
     const inG = (x, y) => y >= 2 && y <= 12 && ((x >= 2 && x <= 6) || (x >= 9 && x <= 13));
-    // night: dark sky, a far block of flats with two lit windows, wet glow low down
-    for (let y = 2; y <= 12; y++) for (let x = 2; x <= 13; x++) {
-      if (!inG(x, y)) continue;
-      let c = G.bayer(x, y) < (y - 2) / 12 ? C('#141c2a') : C('#0c111d');
-      if (y >= 7 && (x < 5 || (x > 9 && x < 13))) c = C('#080a10');
-      px.set(x, y, c);
-    }
-    px.set(3, 8, C('#8a7448')); px.set(11, 9, C('#6e5c3a')); px.set(10, 8, C('#5a4c34'));
-    // rain outside: slanted streaks, moving 4px a frame over a 12px period (seamless loop)
-    const streaks = [[3, 0], [5, 5], [10, 2], [12, 8], [13, 3], [2, 9], [6, 10], [11, 6]];
+    // night sky in clean bands, the far block of flats black against it, two lit windows
+    vsteps(px, 2, 2, 12, 11, [C('#0b0f1a'), C('#0f1522'), C('#141c2c')], inG);
+    for (let x = 2; x <= 13; x++) { const top = x < 5 ? 7 : x < 10 ? 9 : 6; for (let y = top; y <= 12; y++) if (inG(x, y)) px.set(x, y, C('#07090e')); }
+    px.set(3, 9, C('#8a7448')); px.set(12, 8, C('#6e5c3a')); px.set(11, 10, C('#4e4230'));
+    // rain beyond the glass: slanted streaks, 4px a frame over a 12px period, so the loop is seamless
+    const streaks = [[3, 0], [6, 6], [10, 2], [13, 8], [12, 4], [3, 9], [5, 3], [11, 10]];
     for (const [sx, sy] of streaks)
-      for (let j = 0; j < 2; j++) {
-        const t = (sy + k * 4 + j) % 12, y = 1 + t, x = sx - (t >> 2) + 1;
-        if (inG(x, y)) px.set(x, y, mix(px.get(x, y), C('#7c90a8'), j ? 0.55 : 0.3));
+      for (let j = 0; j < 3; j++) {
+        const t = (sy + k * 4 + j) % 12, y = 1 + t, x = sx + 1 - Math.floor(t / 3);
+        if (inG(x, y)) px.set(x, y, mix(px.get(x, y), C('#9aaec4'), j === 2 ? 0.7 : j === 1 ? 0.45 : 0.22));
       }
-    // drops sliding down the inside of the pane: a wet trail and a bright head
+    // drops sliding down the pane: a wet trail with a bright head
     for (const [dx, d0] of [[4, 2], [11, 7], [13, 0]]) {
-      for (let y = 2; y <= 12; y++) if (inG(dx, y) && (y + dx) % 3) px.set(dx, y, mix(px.get(dx, y), C('#30405a'), 0.5));
-      const hy = 2 + ((d0 + k * 4) % 12);
-      if (inG(dx, hy)) { px.set(dx, hy, C('#a8bcd4')); if (inG(dx, hy - 1)) px.set(dx, hy - 1, C('#46586e')); }
+      for (let y = 2; y <= 12; y++) if (inG(dx, y)) px.set(dx, y, mix(px.get(dx, y), C('#3a4c66'), 0.45));
+      const hy = 2 + ((d0 + k * 4) % 11);
+      if (inG(dx, hy)) { px.set(dx, hy, C('#b8cce0')); if (inG(dx, hy + 1)) px.set(dx, hy + 1, C('#5a6e88')); }
     }
-    // static beads on the glass
-    for (const [x, y] of [[2, 4], [6, 6], [9, 3], [12, 11], [5, 11]]) if (inG(x, y)) px.set(x, y, C('#5a6e88'));
+    // beads stuck on the glass
+    for (const [x, y] of [[2, 4], [6, 6], [9, 3], [12, 11], [5, 11]]) if (inG(x, y)) px.set(x, y, C('#4e6280'));
     // meeting stiles and the crescent lock
     px.vline(7, 1, 13, FR[1]); px.vline(8, 1, 13, FR[3]);
     px.set(7, 7, GOLD[2]); px.set(8, 7, GOLD[3]);
@@ -1033,35 +1039,37 @@
     px.rect(0, 0, 32, 17, AL[2]);
     px.hline(0, 31, 0, AL[0]); px.vline(0, 1, 16, AL[1]); px.vline(31, 1, 16, AL[3]); px.hline(1, 31, 16, AL[3]);
     const inG = (x, y) => y >= 2 && y <= 14 && x >= 2 && x <= 29 && x !== 15 && x !== 16;
-    const sky = [C('#9aa6c8'), C('#b4b0cc'), C('#d4b4c0'), C('#eab8b0'), C('#f4cca2'), C('#fae0aa')];
-    for (let y = 2; y <= 14; y++) for (let x = 2; x <= 29; x++) {
-      if (!inG(x, y)) continue;
-      const t = ((y - 2) / 11) * (sky.length - 1);
-      const i0 = Math.min(sky.length - 1, Math.floor(t)), f = t - i0;
-      px.set(x, y, f > G.bayer(x, y) && i0 < sky.length - 1 ? sky[i0 + 1] : sky[i0]);
-    }
+    vsteps(px, 2, 2, 28, 13, [C('#a2acca'), C('#bcb4cc'), C('#dab8c0'), C('#f0c4ae'), C('#f8daa8')], inG);
     // the sun just clearing the rooftops, a soft bloom around it
     spill(px, 21, 12.5, 7, 4.5, C('#fff2c8'), 0.75);
     px.disc(21, 12.5, 2.2, C('#fffbe8'));
     // thin clouds lit pink and gold from below
-    for (const [x0, x1, y, c] of [[4, 11, 5, '#e8c4c8'], [6, 9, 4, '#c8b4c8'], [18, 27, 7, '#f6d4b8'], [22, 25, 6, '#e8bcbc'], [9, 13, 8, '#f0c8b4']])
-      for (let x = x0; x <= x1; x++) if (inG(x, y)) px.set(x, y, C(c));
+    for (const [x0, x1, y, c, u] of [[4, 11, 5, '#ecc8c8', '#c4b0c6'], [17, 27, 7, '#fae0c0', '#e4b8b6'], [8, 13, 9, '#f8d4b8', '#e2b4b0']])
+      for (let x = x0; x <= x1; x++) {
+        if (inG(x, y)) px.set(x, y, C(c));
+        if (x > x0 && x < x1 - 1 && inG(x, y - 1)) px.set(x, y - 1, C(u));
+      }
     // distant roofs and trees, cool violet-grey against the light
     const ridge = [12, 12, 11, 11, 11, 12, 13, 13, 12, 10, 10, 10, 12, 12, 13, 13, 13, 12, 13, 14, 14, 14, 14, 13, 12, 11, 11, 12];
     for (let x = 2; x <= 29; x++) for (let y = ridge[x - 2]; y <= 14; y++) if (inG(x, y)) px.set(x, y, y === ridge[x - 2] ? C('#8a7c94') : C('#6e6480'));
-    // a power pole and a line
-    px.vline(7, 7, 14, C('#5e5470')); px.hline(6, 8, 8, C('#5e5470'));
-    for (let x = 8; x <= 29; x++) { const y = 8 + Math.round(Math.sin((x - 8) / 21 * Math.PI) * 1.5); if (inG(x, y)) px.set(x, y, mix(px.get(x, y), C('#6e6480'), 0.6)); }
+    // a few birds
+    px.set(10, 6, C('#7a6c84')); px.set(11, 5, C('#7a6c84')); px.set(12, 6, C('#7a6c84'));
+    px.set(25, 4, C('#8a7c94')); px.set(26, 3, C('#8a7c94')); px.set(27, 4, C('#8a7c94'));
     // mullion
     px.vline(15, 1, 15, AL[1]); px.vline(16, 1, 15, AL[3]);
     // sheer white curtains drawn back to both sides
     const CU = R('#fbf8f2', '#ece8e0', '#d6d0c6', '#b8b2a8', '#948e86');
+    // gathered at a tie-back, flaring out below: vertical folds, lit on the left of each fold
     for (let y = 0; y <= 17; y++) {
-      const wl = y < 8 ? 3 : y < 11 ? 2 : 3 + ((y - 11) >> 1);
-      for (let x = 0; x < wl; x++) px.set(x, y, x === 0 ? CU[1] : (x + (y >> 2)) % 2 ? CU[0] : CU[2]);
-      for (let x = 0; x < wl; x++) px.set(31 - x, y, x === 0 ? CU[3] : (x + (y >> 2)) % 2 ? CU[1] : CU[2]);
+      const wl = y < 8 ? 4 : y < 11 ? 3 : Math.min(6, 4 + ((y - 11) >> 1));
+      for (let x = 0; x < wl; x++) {
+        const f = x % 3;
+        px.set(x, y, f === 0 ? CU[0] : f === 1 ? CU[1] : CU[2]);
+        px.set(31 - x, y, f === 0 ? CU[1] : f === 1 ? CU[2] : CU[3]);
+      }
+      px.set(wl - 1, y, CU[3]); px.set(32 - wl, y, CU[3]);
     }
-    px.hline(0, 2, 9, CU[3]); px.hline(29, 31, 9, CU[4]);
+    px.hline(0, 3, 9, CU[3]); px.hline(28, 31, 9, CU[4]);
     // sill catching the warm light
     px.rect(0, 17, 32, 2, AL[1]); px.hline(0, 31, 17, C('#fff4dc')); px.hline(1, 31, 18, AL[3]);
     px.outline();
@@ -1075,8 +1083,8 @@
     px.rect(x, y, 12, 12, F[2]);
     px.hline(x, x + 11, y, F[0]); px.vline(x, y + 1, y + 11, F[1]); px.vline(x + 11, y + 1, y + 11, F[3]); px.hline(x + 1, x + 11, y + 11, F[4]);
     // glass reflecting the dim room: lighter at the top, a cool sheen and two glints
-    vgrad(px, x + 1, y + 1, 10, 9, [C('#a2b2bc'), C('#7e8e9a'), C('#5a6874'), C('#3e4852')]);
-    px.line(x + 2, y + 6, x + 6, y + 2, C('#c8d6de')); px.line(x + 3, y + 8, x + 8, y + 3, mix(C('#c8d6de'), C('#7e8e9a'), 0.5));
+    vsteps(px, x + 1, y + 1, 10, 10, [C('#9cacb8'), C('#7a8a98'), C('#5c6a78'), C('#424c58')]);
+    px.line(x + 2, y + 6, x + 6, y + 2, C('#c8d6de')); px.line(x + 3, y + 7, x + 7, y + 3, mix(C('#c8d6de'), C('#7a8a98'), 0.45));
     px.set(x + 9, y + 2, C('#dce6ec'));
     // glass shelf with a tooth mug
     px.hline(x, x + 11, y + 12, C('#b8c8cc')); px.hline(x + 1, x + 11, y + 13, C('#8a9aa0'));
@@ -1143,8 +1151,11 @@
     px.rect(3, 9, 10, 9, W[2]); px.vline(3, 9, 17, W[1]); px.vline(12, 9, 17, W[3]); px.hline(3, 12, 17, W[4]);
     // the bird door (closed) and the dial
     px.rect(7, 9, 2, 2, W[4]); px.set(7, 9, W[3]);
-    clockFace(px, 8, 13.5, 2, L);
-    px.set(8, 12, C('#1e1a1c')); px.set(8, 13, C('#1e1a1c')); px.set(9, 13, C('#1e1a1c'));
+    px.disc(8, 14, 3.4, L[3]);
+    px.disc(8, 14, 2.6, C('#efe6cc'));
+    px.set(6, 12, C('#d6caa8')); px.set(7, 12, C('#d6caa8'));
+    px.set(8, 12, C('#5a4a3a')); px.set(10, 14, C('#5a4a3a')); px.set(8, 16, C('#5a4a3a')); px.set(6, 14, C('#5a4a3a'));
+    px.set(8, 13, C('#1e1a1c')); px.set(7, 14, C('#1e1a1c')); px.set(8, 14, C('#1e1a1c'));
     // carved leaves on the sides of the body
     px.set(2, 12, L[2]); px.set(1, 13, L[1]); px.set(2, 14, L[3]); px.set(13, 12, L[2]); px.set(14, 13, L[2]); px.set(13, 14, L[3]);
     // pendulum: a carved wooden leaf on a thin rod
@@ -1153,7 +1164,7 @@
     px.stamp(['.L.', 'LLl', 'Lll', '.l.'], { L: L[1], l: L[3] }, 7 + s, 22);
     // chains and pine-cone weights at different heights
     for (const [cx, wy] of [[5, 24], [11, 26]]) {
-      for (let y = 18; y < wy; y++) px.set(cx, y, y % 2 ? CHROME[2] : CHROME[3]);
+      for (let y = 18; y < wy; y++) px.set(cx, y, y % 2 ? C('#8a8478') : C('#4e4a44'));
       px.stamp(['.c.', 'ccC', 'cCC', 'CCC', '.C.'], { c: RUST[2], C: RUST[3] }, cx - 1, wy);
       px.set(cx - 1, wy + 1, RUST[1]);
     }

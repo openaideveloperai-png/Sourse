@@ -7,7 +7,7 @@
   function Explore() {
     G.EX = this;
     this.room = null;
-    this.p = { x: 0, y: 0, dir: 'down', moving: false, walkT: 0, hidden: false, hideObj: null };
+    this.p = { x: 0, y: 0, dir: 'down', moving: false, walkT: null, hidden: false, hideObj: null };
     this.t = 0;
     this.fade = 1;
     this.flash = null;
@@ -21,8 +21,21 @@
     this.stepT = 0;
     this.grain = 0;
     this.trail = [];
+    this.folPos = null;
+    this.folDir = 'down';
+    this.fol = { walkT: null, foot: false };
   }
   G.Explore = Explore;
+  const FOL_DIST = 16; // the companion walks one tile behind, measured along the player's trail
+
+  // map fields that may be values or functions E => value (dark, music, ambience, lights, overlay,
+  // light, tint, floorSound, follower)
+  Explore.prototype.mapVal = function (k) {
+    const v = this.room.def[k];
+    if (typeof v !== 'function') return v;
+    try { return v(G.EV.api); } catch (e) { G.contentError(this.room.id + '.' + k, e); return undefined; }
+  };
+  Explore.prototype.mapDark = function () { return this.mapVal('dark') || 0; };
 
   // ---------------- room changes ----------------
   Explore.prototype.load = function (map, x, y, dir) {
@@ -32,33 +45,89 @@
     this.p.y = y * TS + 14;
     if (dir) this.p.dir = dir;
     this.p.hidden = false;
+    this.p.hideObj = null;
+    this.p.moving = false;
+    this.p.walkT = null;
+    // spawned actors are gone with the old room, so the companion is back on the trail
+    delete G.S.flags['@followerOut'];
     // the companion starts one tile behind the player (or on the player if that tile is solid)
-    this.trail = [];
-    const bk = { up: [0, 1], down: [0, -1], left: [1, 0], right: [-1, 0] }[this.p.dir] || [0, 1];
-    const bc = x + bk[0], br = y + bk[1];
-    const behind = this.room.isSolid(bc, br) ? [this.p.x, this.p.y] : [bc * TS + 8, br * TS + 14];
-    for (let i = 0; i < 20; i++) { const k = Math.max(0, i - 6) / 13; this.trail.push([behind[0] + (this.p.x - behind[0]) * k, behind[1] + (this.p.y - behind[1]) * k, this.p.dir]); }
+    const bv = G.DIRV[this.p.dir] || [0, 1];
+    const bc = x - bv[0], br = y - bv[1];
+    this.resetTrail(this.room.isSolid(bc, br) ? [this.p.x, this.p.y, this.p.dir] : [bc * TS + 8, br * TS + 14, this.p.dir]);
     this.touching = new Set(this.touchedNow());
     this.darkOverride = null;
+    this.tint = null;
+    this.bubbles = [];
     const def = this.room.def;
-    G.Audio.music(G.Chase.active ? G.Chase.musicName() : def.music || null);
-    G.Audio.ambience(def.ambience || null);
+    G.Audio.music(G.Chase.active ? G.Chase.musicName() : this.mapVal('music') || null);
+    G.Audio.ambience(this.mapVal('ambience') || null);
     if (def.location) this.banner = { text: def.location, t: 0, small: true };
+  };
+  // the trail the companion follows: she is drawn FOL_DIST px back along it
+  Explore.prototype.resetTrail = function (from) {
+    const p = this.p;
+    this.folDir = from[2] || p.dir;
+    this.trail = [[from[0], from[1], this.folDir], [p.x, p.y, p.dir]];
+    this.fol = { walkT: null, foot: this.fol ? this.fol.foot : false };
+    this.folPos = this.followerPos();
+  };
+  Explore.prototype.followerPos = function () {
+    const tr = this.trail, p = this.p;
+    let need = FOL_DIST, x = p.x, y = p.y;
+    for (let i = tr.length - 1; i >= 0; i--) {
+      const d = Math.hypot(tr[i][0] - x, tr[i][1] - y);
+      if (d >= need && d > 0) { const k = need / d; return [x + (tr[i][0] - x) * k, y + (tr[i][1] - y) * k, this.folDir]; }
+      need -= d; x = tr[i][0]; y = tr[i][1];
+    }
+    return [x, y, this.folDir];
+  };
+  // every frame: move the companion along the trail; she faces where she walks and her walk
+  // cycle runs by the distance she covered (so she never skates)
+  Explore.prototype.updateFollower = function () {
+    if (!G.S.flags.follower || !this.trail.length) { this.fol.walkT = null; return; }
+    const np = this.followerPos(), op = this.folPos || np;
+    const dx = np[0] - op[0], dy = np[1] - op[1], d = Math.hypot(dx, dy);
+    if (d > 0.01 && d < 8) this.folDir = G.dirOf(dx, dy);
+    G.walkClock(this.fol, d < 8 ? d : 0);
+    this.folPos = [np[0], np[1], this.folDir];
+  };
+  // the player moved dist px this frame (by input or E.walk): walk cycle, footsteps, trail
+  Explore.prototype.stepPlayer = function (dist) {
+    const p = this.p;
+    p.moving = dist > 0.01;
+    if (!p.moving) { p.walkT = null; return; }
+    this.trail.push([p.x, p.y, p.dir]);
+    if (this.trail.length > 240) this.trail.splice(0, this.trail.length - 240);
+    if (G.walkClock(p, dist)) G.Audio.sfx('step', this.mapVal('floorSound'));
   };
   Explore.prototype.start = function (map, x, y, dir) {
     [x, y, dir] = G.resolveEntry(map, x, y, dir);
     this.load(map, x, y, dir);
     this.fade = 1;
     const self = this;
-    G.EV.run(function* () { yield* self.fadeTo(0, 0.6); });
+    G.EV.run(function* () {
+      yield* self.fadeTo(0, 0.6);
+      // retry / load / continue: a registry chase that was on (flag @chase) starts again now
+      const id = G.S.flags['@chase'];
+      if (id && !G.Chase.active) G.Chase.resume(id);
+    });
     this.afterEnter();
   };
-  Explore.prototype.afterEnter = function () {
-    const def = this.room.def;
-    const first = !G.S.flags['@visited:' + this.room.id];
-    G.S.flags['@visited:' + this.room.id] = true;
-    if (!G.Chase.active) this.checkpoint();
-    if (first && def.first) G.EV.run(def.first);
+  // after every room entry: retry point, then the room's first-visit and every-visit events.
+  // opts.checkpoint === false skips the retry point (scripted sequences).
+  Explore.prototype.afterEnter = function (opts) {
+    opts = opts || {};
+    const def = this.room.def, id = this.room.id;
+    G.S.flags['@seen:' + id] = true;
+    const ch = G.S.flags['@chase'];
+    const hunted = !!G.Chase.active || !!(ch && G.CHASES[ch]);
+    // taken BEFORE the first-visit flag, so a retry replays the room's 'first' event
+    if (!G.Chase.active && opts.checkpoint !== false) this.checkpoint();
+    // 'first' never runs during a chase: it waits for the next calm entry
+    if (!hunted && !G.S.flags['@visited:' + id]) {
+      G.S.flags['@visited:' + id] = true;
+      if (def.first) G.EV.run(def.first);
+    }
     if (def.enter) G.EV.run(def.enter);
   };
   // named entry points: G.MAPS[id].entries = {name: [x, y, dir]}; doors and E.goto may give a
@@ -78,7 +147,7 @@
     yield* this.fadeTo(1, opts.fade === undefined ? 0.22 : opts.fade);
     this.load(map, x, y, dir);
     G.Chase.onTransfer(from, map, { x: this.p.x, y: this.p.y });
-    this.afterEnter();
+    this.afterEnter({ checkpoint: opts.checkpoint });
     yield* this.fadeTo(0, opts.fade === undefined ? 0.22 : opts.fade);
   };
   Explore.prototype.fadeTo = function* (to, time) {
@@ -126,7 +195,7 @@
     if (def.door) { G.EV.run(function* (E) { yield* self.useDoor(E, o); }); return; }
     if (def.hide) { G.EV.run(function* (E) { yield* self.tryHide(E, o); }); return; }
     if (def.on) { G.EV.run(def.on, o); return; }
-    if (def.text) G.EV.run(function* (E) { yield* E.say(...[].concat(def.text)); });
+    if (def.text) G.EV.run(function* (E) { yield* E.say(...G.evalText(def.text, o)); });
   };
   Explore.prototype.useDoor = function* (E, o) {
     const def = o.def, d = def.door;
@@ -151,22 +220,27 @@
       else can = !!def.lock(E);
       if (!can) {
         G.Audio.sfx('locked');
-        yield* E.say(...[].concat(def.lockText || "@ It's locked."));
+        const lt = G.evalText(def.lockText, o);
+        yield* E.say(...(lt.length ? lt : ["@ It's locked."]));
         return;
       }
       if (typeof def.lock === 'string') {
         const it = G.ITEMS[def.lock];
         G.Audio.sfx('unlock');
-        yield* E.say(def.unlockText || '@ Used the ' + (it ? it.name : def.lock) + '.');
+        const ut = G.evalText(def.unlockText, o);
+        yield* E.say(...(ut.length ? ut : ['@ Used the ' + (it ? it.name : def.lock) + '.']));
         if (def.consume) E.take(def.lock);
-      } else if (def.unlockText) { G.Audio.sfx('unlock'); yield* E.say(def.unlockText); }
+      } else if (def.unlockText) { G.Audio.sfx('unlock'); yield* E.say(...G.evalText(def.unlockText, o)); }
       G.S.flags[ukey] = true;
     }
     if (def.before) { const r = yield* def.before(E, o); if (r === false) return; }
     yield* E.goto(d.to, d.entry || d.x, d.y, d.dir || this.p.dir, { sfx: def.sfx === undefined ? (def.stairs ? 'stairs' : 'door') : def.sfx });
   };
   Explore.prototype.tryHide = function* (E, o) {
-    const ok = yield* E.yesno(o.def.hidePrompt || '@ Hide inside?');
+    const q = G.evalText(o.def.hidePrompt, o);
+    if (!q.length) q.push('@ Hide inside?');
+    if (q.length > 1) yield* E.say(...q.slice(0, -1));
+    const ok = yield* E.yesno(q[q.length - 1]);
     if (!ok) return;
     if (G.Chase.seesHiding()) {
       G.Audio.sfx('door');
@@ -178,6 +252,7 @@
     G.Audio.sfx('closet');
     this.p.hidden = true;
     this.p.hideObj = o;
+    this.p.hideAt = G.S.time; // he hears a closet that closed just before he came through the door
     if (o.def.hideSprite) E.setSprite(o.id, o.def.hideSprite);
     yield* E.wait(0.4);
     // stay hidden until the player presses a key
@@ -201,14 +276,18 @@
 
   // ---------------- update ----------------
   Explore.prototype.update = function (dt, inp) {
+    this.updateScene(dt, inp);
+    this.updateFollower();
+  };
+  Explore.prototype.updateScene = function (dt, inp) {
     this.t += dt;
     G.S.time += dt;
     if (this.flash) { this.flash.age += dt; if (this.flash.age > this.flash.t) this.flash = null; }
     if (this.banner) { this.banner.t += dt; if (this.banner.t > (this.banner.small ? 2.6 : 4)) this.banner = null; }
     for (let i = this.bubbles.length - 1; i >= 0; i--) { this.bubbles[i].t += dt; if (this.bubbles[i].t > this.bubbles[i].life) this.bubbles.splice(i, 1); }
     G.FX.update(dt);
-    if (G.UI.active) { G.UI.update(dt, inp); return; }
-    if (G.Dialog.active) { G.Dialog.update(dt, inp); G.EV.update(dt, inp); return; }
+    if (G.UI.active) { this.p.moving = false; this.p.walkT = null; G.UI.update(dt, inp); return; }
+    if (G.Dialog.active) { this.p.moving = false; this.p.walkT = null; G.Dialog.update(dt, inp); G.EV.update(dt, inp); return; }
     const def = this.room.def;
     if (def.update) def.update(G.EV.api, dt);
     // the hunter only moves while the player can (events and door transitions freeze both),
@@ -218,14 +297,16 @@
       G.Chase.updateWalkers(dt);
     }
     if (G.UI.active) return;
-    if (G.EV.busy) { G.EV.update(dt, inp); this.p.moving = false; return; }
+    // an event runs; E.walk moves the player through stepPlayer (which sets moving again)
+    if (G.EV.busy) { this.p.moving = false; G.EV.update(dt, inp); if (!this.p.moving) this.p.walkT = null; return; }
     if (inp.menu) { G.UI.openMenu(); return; }
     // movement
     const p = this.p;
-    if (p.hidden) return;
+    if (p.hidden) { p.moving = false; p.walkT = null; return; }
     let mx = inp.mx, my = inp.my;
     if (mx && my) my = 0; // four directions, like the classics
     const ox = p.x, oy = p.y;
+    this.running = false;
     if (mx || my) {
       p.dir = mx > 0 ? 'right' : mx < 0 ? 'left' : my > 0 ? 'down' : 'up';
       // no running while hunted (the classics have no dash; it would beat every chase)
@@ -235,13 +316,7 @@
       G.movePlayer(this.room, p, mx, my, dt, G.PLAYER.speed * (run ? G.PLAYER.run : 1));
       this.running = run;
     }
-    p.moving = Math.abs(p.x - ox) + Math.abs(p.y - oy) > 0.01;
-    if (p.moving) { this.trail.push([p.x, p.y, p.dir]); if (this.trail.length > 60) this.trail.shift(); }
-    if (p.moving) {
-      p.walkT += dt * (this.running ? 1.5 : 1);
-      this.stepT -= dt;
-      if (this.stepT <= 0) { this.stepT = this.running ? 0.2 : 0.3; G.Audio.sfx('step', this.room.def.floorSound); }
-    } else p.walkT = 0;
+    this.stepPlayer(Math.hypot(p.x - ox, p.y - oy));
     // bumping into doors / pushables
     if ((mx || my) && !p.moving) {
       this.bumpT += dt;
@@ -311,6 +386,9 @@
   };
 
   // ---------------- drawing ----------------
+  Explore.prototype.followerShown = function () {
+    return !!(G.S.flags.follower && !this.p.hidden && !G.S.flags['@followerOut'] && this.folPos && this.mapVal('follower') !== false);
+  };
   Explore.prototype.camera = function () {
     const room = this.room, p = this.p;
     let cx, cy;
@@ -336,23 +414,26 @@
       const L = o.def.light;
       if (L) { const a = o.anchor(); lights.push({ x: a.x + (L.dx || 0) + ox, y: a.y + (L.dy || -8) + oy, r: L.r || 40, col: L.col, glow: L.glow, flicker: L.flicker, i: L.i }); }
     }
-    for (const L of def.lights || []) lights.push({ x: L.x * TS + 8 + ox, y: L.y * TS + 8 + oy, r: L.r || 48, col: L.col, glow: L.glow, flicker: L.flicker, i: L.i });
-    if (!p.hidden) list.push({ y: p.y, draw: (c, X, Y) => {
-      c.fillStyle = 'rgba(8,4,14,0.35)';
-      c.fillRect(Math.round(X + p.x - 5), Math.round(Y + p.y - 2), 10, 2);
-      G.drawChar(c, G.S.flags['@playerChar'] || G.PLAYER_CHAR || 'kid', X + p.x, Y + p.y, p.dir, p.moving ? p.walkT : null);
-    } });
-    // companion following the player's trail (G.S.flags.follower = charName)
+    for (const L of this.mapVal('lights') || []) lights.push({ x: L.x * TS + 8 + ox, y: L.y * TS + 8 + oy, r: L.r || 48, col: L.col, glow: L.glow, flicker: L.flicker, i: L.i });
+    if (!p.hidden) {
+      const pose = G.S.flags['@pose:player'], pa = G.S.flags['@alpha:player'];
+      list.push({ y: p.y, draw: (c, X, Y) => {
+        c.fillStyle = 'rgba(8,4,14,' + (0.35 * (pa === undefined ? 1 : pa)).toFixed(3) + ')';
+        c.fillRect(Math.round(X + p.x - 5), Math.round(Y + p.y - 2), 10, 2);
+        if (pose) G.drawSprite(c, pose, X + p.x, Y + p.y, this.t, p.dir === 'right', pa);
+        else G.drawChar(c, G.S.flags['@playerChar'] || G.PLAYER_CHAR || 'kid', X + p.x, Y + p.y, p.dir, p.walkT, pa);
+      } });
+    }
+    // companion following the player's trail (G.S.flags.follower = charName); not drawn while she
+    // is a real object (E.followerOut) or waits outside (map follower: false)
     const fol = G.S.flags.follower;
-    if (fol && !p.hidden && this.trail.length) {
-      const tr = this.trail[Math.max(0, this.trail.length - 14)];
-      this.folPos = tr;
-      const fm = p.moving;
-      this.folWalk = (this.folWalk || 0) + (fm ? 1 / 60 : 0);
+    const folShown = this.followerShown();
+    if (folShown) {
+      const tr = this.folPos, fw = this.fol.walkT;
       list.push({ y: tr[1] - 0.5, draw: (c, X, Y) => {
         c.fillStyle = 'rgba(8,4,14,0.35)';
         c.fillRect(Math.round(X + tr[0] - 5), Math.round(Y + tr[1] - 2), 10, 2);
-        G.drawChar(c, fol, X + tr[0], Y + tr[1], tr[2], fm ? this.folWalk : null);
+        G.drawChar(c, fol, X + tr[0], Y + tr[1], tr[2], fw);
       } });
     }
     G.Chase.draw(ctx, list);
@@ -360,10 +441,10 @@
     for (const it of list) it.draw(ctx, ox, oy);
     G.FX.draw(ctx, ox, oy, 0);
     // lighting
-    const dark = this.darkOverride !== null && this.darkOverride !== undefined ? this.darkOverride : def.dark || 0;
+    const dark = this.darkOverride !== null && this.darkOverride !== undefined ? this.darkOverride : this.mapDark();
     if (dark > 0) {
       G.Chase.lights(ox, oy, dark, lights);
-      lights.push({ x: p.x + ox, y: p.y - 10 + oy, r: G.S.flags.playerLight || def.light || 58, i: 1, col: G.S.flags.playerLightCol, glow: 0.15, flicker: !!G.S.flags.playerLightCol });
+      lights.push({ x: p.x + ox, y: p.y - 10 + oy, r: G.S.flags.playerLight || this.mapVal('light') || 58, i: 1, col: G.S.flags.playerLightCol, glow: 0.15, flicker: !!G.S.flags.playerLightCol });
       G.Light.draw(ctx, dark, def.tintDark || '#05030a', lights, this.t);
     } else if (lights.length) {
       ctx.globalCompositeOperation = 'lighter';
@@ -373,7 +454,11 @@
     }
     G.FX.draw(ctx, ox, oy, 1);
     if (def.rain) this.drawRain(ctx, ox, oy, def.rain);
-    if (def.overlay) { ctx.fillStyle = def.overlay; ctx.fillRect(0, 0, W, H); }
+    const ov = this.mapVal('overlay');
+    if (ov) { ctx.fillStyle = ov; ctx.fillRect(0, 0, W, H); }
+    // map tint (E => ['#5a0008', 0.35] | null), then the event tint (E.tint)
+    const mt = this.mapVal('tint');
+    if (mt && mt[0]) { ctx.globalAlpha = mt[1] === undefined ? 0.3 : mt[1]; ctx.fillStyle = mt[0]; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     if (this.tint) { ctx.globalAlpha = this.tint.alpha; ctx.fillStyle = this.tint.color; ctx.fillRect(0, 0, W, H); ctx.globalAlpha = 1; }
     // chase: red pulse at the edges
     if (G.Chase.active) { const k = 0.25 + Math.sin(this.t * 7) * 0.08; ctx.globalAlpha = k; G.vignetteRed(ctx); ctx.globalAlpha = 1; }
@@ -383,7 +468,7 @@
     for (const b of this.bubbles) {
       let x, y;
       if (b.id === 'player') { x = p.x; y = p.y - 26; }
-      else if (b.id === 'follower') { if (!this.folPos || !G.S.flags.follower) continue; x = this.folPos[0]; y = this.folPos[1] - 18; }
+      else if (b.id === 'follower' && !room.obj('follower')) { if (!folShown) continue; x = this.folPos[0]; y = this.folPos[1] - 18; }
       else { const o = room.obj(b.id); if (!o) continue; const a = o.anchor(); x = a.x; y = a.y - (o.char ? 26 : o.h * TS + 6); }
       const f = G.MOB_BUBBLES && G.MOB_BUBBLES[b.kind];
       if (f) G.drawFrame(ctx, f, ox + x + 6, oy + y - Math.round((1 - Math.min(1, b.t * 8)) * 4));

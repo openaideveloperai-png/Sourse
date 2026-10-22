@@ -30,142 +30,113 @@
   // ======================================================================
   const CAT = G.pal({
     k: '#38343e', F: '#57535f', f: '#78747f', l: '#9c98a2', L: '#b8b4bc',
-    w: '#d4cec8', W: '#a8a29e', p: '#a87882', e: '#c8c25a', E: '#1a1420', n: '#c27880', m: '#2c2430',
+    w: '#d8d2cc', W: '#a8a29e', p: '#b07c86', e: '#d0c85a', E: '#1a1420', n: '#c27880', m: '#2c2430',
   });
-  // Tama is drawn from 14x11 string rows per direction and frame.
-  // facing down (walking toward the viewer)
-  const CAT_D = [
-    [ // stand
-      '..F.....F.F...',
-      '..fpF...FpF...',
-      '..lfkfkfffF..k',
-      '.LlfffffffFF.F',
-      '.lfeEfffEefF.F',
-      'llfffwnwffFF.F',
-      '..fFWmwmWFF.F.',
-      '...FFwwwFF..F.',
-      '..lfFwwwFfF.F.',
-      '...lf.F.fFF...',
-      '...ww...wW....',
-    ],
-    [ // step: left paw forward, head dips
-      '..............',
-      '..F.....F.F...',
-      '..fpF...FpF...',
-      '..lfkfkfffF.k.',
-      '.LlfffffffFF.F',
-      '.lfeEfffEefF.F',
-      'llfffwnwffFF.F',
-      '..fFWmwmWFF.F.',
-      '...FFwwwFF.F..',
-      '..lfFwwwFfF...',
-      '...ww...fF....',
-    ],
-    [ // step: right paw forward
-      '..............',
-      '..F.....F.F...',
-      '..fpF...FpF..k',
-      '..lfkfkfffF..F',
-      '.LlfffffffFF.F',
-      '.lfeEfffEefF.F',
-      'llfffwnwffFF.F',
-      '..fFWmwmWFF.F.',
-      '...FFwwwFF..F.',
-      '..lfFwwwFfFF..',
-      '...lf...wW....',
-    ],
+  G.CAT_PAL = CAT;
+  // Every Tama frame is the same head/body block (fixed shape) plus legs and a tail drawn per frame.
+  // Fill area 16x12 inside an 18x14 canvas; ground row 11; anchor between the feet.
+  const CAT_SIDE = [
+    '.k.Fk...........',
+    '.FpFk...........',
+    '.ffffF..........',
+    'leEfffF.........',
+    'nfffffLlLlLlLf..',
+    '.wWffkfkfkfkfF..',
+    '..wwfffkfkffFF..',
+    '...wwfffffffF...',
   ];
-  // facing up (walking away): back of the head, striped back, tail up and swaying
-  const CAT_U = [
-    [
-      '..F.....F.F...',
-      '..fF....FfF...',
-      '..lfkfkfkfF...',
-      '.LlfkfkfkfFF..',
-      '.lffffffffFF.k',
-      '..lfffffffF..F',
-      '...FFFFFFF..F.',
-      '..lfkfffkfF.F.',
-      '..lffkfkffF.F.',
-      '..lfffffffFF..',
-      '...FF...FF....',
-    ],
-    [
-      '..............',
-      '..F.....F.F...',
-      '..fF....FfF...',
-      '..lfkfkfkfF.k.',
-      '.LlfkfkfkfFF.F',
-      '.lffffffffFF.F',
-      '..lfffffffF.F.',
-      '...FFFFFFF..F.',
-      '..lfkfffkfF.F.',
-      '..lffkfkffFF..',
-      '...FF...lF....',
-    ],
-    [
-      '..............',
-      '..F.....F.F...',
-      '..fF....FfF..k',
-      '..lfkfkfkfF..F',
-      '.LlfkfkfkfFF.F',
-      '.lffffffffFF.F',
-      '..lfffffffF.F.',
-      '...FFFFFFF..F.',
-      '..lfkfffkfF.F.',
-      '..lffkfkffFF..',
-      '...lF...FF....',
-    ],
+  const CAT_FRONT = [
+    '...F......F.F...',
+    '...FpF...FpFF...',
+    '...fkfkfkffffF..',
+    '..lffffkfffffF..',
+    '..lfeEfffEeffF..',
+    '.llfffwnwfffFF..',
+    '...fFwmwmwFF....',
+    '....FFwwwFF.....',
+    '....lfwwwfF.....',
+    '...lffwwwffF....',
   ];
-  // facing left (profile): the torn ear is the near one
-  const CAT_L = [
-    [
-      '.F.F.F........',
-      '.fFpFF......k.',
-      '.lffffF.....kF',
-      'leEfff.....F..',
-      'nwffffLlklkFF.',
-      '.wWfFffkfkfffF',
-      '..wfffkffkfffF',
-      '...WwfFfffffF.',
-      '...fF.fF.fFfF.',
-      '...fF..F..fFF.',
-      '...wW..W..wW..',
-    ],
-    [
-      '..............',
-      '.F.F.F......k.',
-      '.fFpFF......kF',
-      '.lffffF....F..',
-      'leEfffLlklkFF.',
-      'nwffffkfkffffF',
-      '.wWfFkffkffffF',
-      '..wwfFfffffFF.',
-      '..fF..fF.fFfF.',
-      '.fF....fF..FF.',
-      '.wW.....wW.wW.',
-    ],
-    [
-      '..............',
-      '.F.F.F.......k',
-      '.fFpFF......kF',
-      '.lffffF....F..',
-      'leEfffLlklkFF.',
-      'nwffffkfkffffF',
-      '.wWfFkffkffffF',
-      '..wwfFfffffFF.',
-      '...fFfF.fFfF..',
-      '....fFF.FfF...',
-      '....wWW.wW....',
-    ],
+  const CAT_BACK = [
+    '...F.F....F.....',
+    '...FkF...FkF....',
+    '...ffffffffF....',
+    '..lfkfffkfffF...',
+    '..lffkfkfffFF...',
+    '...lfffffffF....',
+    '..lfkfffffkffF..',
+    '..lffkfkfkfffF..',
+    '..lffffffffffF..',
+    '...lfffffffFF...',
   ];
-  const catFrame = (rows) => fig(CAT, 14, 11, [[rows, 0, 0]], 6);
-
+  function catPx() { return new G.PX(18, 14); }
+  const cset = (px, x, y, c) => px.set(1 + x, 1 + y, c);
+  // a leg from the hip (x, y0) down to the ground row, the foot shifted by dx; near legs are 2px wide
+  function catLeg(px, x, y0, dx, near, lift) {
+    const gy = 11 - (lift || 0);
+    const n = gy - y0;
+    for (let y = y0; y < gy; y++) {
+      const xx = x + Math.round((dx * (y - y0 + 1)) / (n + 1));
+      cset(px, xx, y, near ? CAT.f : CAT.F);
+      if (near) cset(px, xx + 1, y, CAT.F);
+    }
+    cset(px, x + dx, gy, near ? CAT.w : CAT.F);
+    if (near) cset(px, x + dx + 1, gy, CAT.W);
+  }
+  function catTail(px, pts, oy) {
+    pts.forEach(([x, y], i) => cset(px, x, y + oy, i === pts.length - 1 ? CAT.k : i % 2 ? CAT.F : CAT.f));
+  }
+  function catSideFrame(k) {
+    const px = catPx(), bob = k ? 1 : 0;
+    // [near front, far front, near back, far back] foot offsets; diagonal pairs move together
+    const st = [[0, 0, 0, 0], [-2, 2, 2, -2], [2, -2, -2, 2]][k];
+    catLeg(px, 5, 7 + bob, st[1], false);
+    catLeg(px, 12, 7 + bob, st[3], false);
+    catTail(px, [[[13, 4], [14, 3], [14, 2], [15, 1], [15, 0]], [[13, 4], [14, 3], [15, 2], [15, 1], [14, 0]], [[13, 4], [14, 3], [14, 2], [14, 1], [15, 0]]][k], bob);
+    px.stamp(CAT_SIDE, CAT, 1, 1 + bob);
+    catLeg(px, 3, 8 + bob, st[0], true);
+    catLeg(px, 10, 8 + bob, st[2], true);
+    px.outline();
+    return G.frame(px, 9, 13);
+  }
+  function catFrontFrame(k) {
+    const px = catPx(), bob = k ? 1 : 0;
+    catTail(px, [[[12, 8], [13, 7], [13, 6], [14, 5], [14, 4]], [[12, 8], [13, 7], [14, 6], [14, 5], [15, 4]], [[12, 8], [13, 7], [13, 6], [13, 5], [14, 4]]][k], bob);
+    // hind paws peeking out behind the chest
+    cset(px, 4, 11, CAT.F); cset(px, 11, 11, CAT.F);
+    px.stamp(CAT_FRONT, CAT, 1, 1 + bob);
+    // front legs: the lifted paw rises one pixel and tucks in
+    const lift = [[0, 0], [1, 0], [0, 1]][k];
+    for (const [x, li] of [[5, lift[0]], [9, lift[1]]]) {
+      for (let y = 10 + bob; y < 11 - li; y++) { cset(px, x, y, CAT.f); cset(px, x + 1, y, CAT.F); }
+      cset(px, x, 11 - li, CAT.w); cset(px, x + 1, 11 - li, CAT.W);
+    }
+    px.outline();
+    return G.frame(px, 9, 13);
+  }
+  function catBackFrame(k) {
+    const px = catPx(), bob = k ? 1 : 0;
+    px.stamp(CAT_BACK, CAT, 1, 1 + bob);
+    // hind legs; a lifted paw shows its pink pad
+    const lift = [[0, 0], [0, 1], [1, 0]][k];
+    for (const [x, li] of [[4, lift[0]], [10, lift[1]]]) {
+      for (let y = 10 + bob; y < 11 - li; y++) { cset(px, x, y, CAT.f); cset(px, x + 1, y, CAT.F); }
+      cset(px, x, 11 - li, li ? CAT.p : CAT.F); cset(px, x + 1, 11 - li, li ? CAT.p : CAT.k);
+    }
+    // tail raised over the back, swaying
+    catTail(px, [[[7, 9], [8, 8], [9, 7], [10, 6], [10, 5], [10, 4]], [[7, 9], [8, 8], [9, 7], [10, 6], [11, 5], [11, 4]], [[7, 9], [8, 8], [9, 7], [9, 6], [10, 5], [10, 4]]][k].map(([x, y], i) => [x, y]), bob);
+    // light edge on the tail so it separates from the back
+    const tp = [[[8, 8], [9, 7], [10, 6]], [[8, 8], [9, 7], [10, 6]], [[8, 8], [9, 7], [9, 6]]][k];
+    for (const [x, y] of tp) cset(px, x - 1, y + bob, CAT.L);
+    px.outline();
+    return G.frame(px, 9, 13);
+  }
   G.defChar('tama', () => ({
-    down: CAT_D.map(catFrame),
-    up: CAT_U.map(catFrame),
-    left: CAT_L.map(catFrame),
+    down: [0, 1, 2].map(catFrontFrame),
+    up: [0, 1, 2].map(catBackFrame),
+    left: [0, 1, 2].map(catSideFrame),
   }));
+
 
   // ======================================================================
   // ADULTS: 16-wide string rows like the kid sprites, taller bodies
@@ -487,6 +458,205 @@
     },
   };
   G.defChar('kuroda', () => adultChar(KURODA, KURODA_DIRS));
+
+  // ---------------- OTA (resident): tiny hunched old woman, lavender kimono, grey bun ----------------
+  const OTA = G.pal({
+    h: '#8c8894', H: '#aeaab6', i: '#cecad4', g: '#6a6674', G: '#4e4a58',
+    s: '#ecc6a6', S: '#c89c7e', c: '#e2a69a', e: '#3a2a30', m: '#9a6058',
+    k: '#a898c6', K: '#8676a8', l: '#c6badc', d: '#62548a',
+    o: '#5c3c62', O: '#3e2846', f: '#7a5484', y: '#c8a462', u: '#ece6da', U: '#b8b0a4',
+    z: '#7a5440', Z: '#4e3428',
+  });
+  // feet under the kimono hem: white tabi, wooden zori; tiny shuffling steps
+  const OLEGS_D = [
+    ['....kkkkkkKd....', '....kkkkkdKd....', '.....uU..uU.....', '....zzZ..zzZ....'],
+    ['....kkkkkkKd....', '....kkkkkdKd....', '....zzZ..uU.....', '.........zzZ....'],
+    ['....kkkkkkKd....', '....kkkkkdKd....', '.....uU..zzZ....', '....zzZ.........'],
+  ];
+  const OLEGS_L = [
+    ['....kkkkkKd.....', '....kkkkkKd.....', '.....uuU........', '....zzzZ........'],
+    ['....kkkkkKd.....', '...kkkkkkKd.....', '...uuU..UU......', '..zzzZ..ZZZ.....'],
+    ['....kkkkkKd.....', '...kkkkkkKd.....', '...UU...uuU.....', '..ZZZ...zzzZ....'],
+  ];
+  const OTA_HEAD_TOP = [
+    '......gHhg......',
+    '.....hiHhhg.....',
+    '......gGGg......',
+    '....hHHhhhhg....',
+    '...hHihhhhhhg...',
+    '..hHhhhhhhhhhg..',
+  ];
+  // front torso: hands clasped over the obi; they sway a pixel with each step
+  const otaTorsoD = (hx) => [
+    '....lkuSSukK....',
+    '...lkkkuukkKd...',
+    '..lkkkkkkkkkKd..',
+    '..lkooooyoooKd..',
+    ('..lkOOOOOOOOKd..').slice(0, 6 + hx) + 'ssSs' + ('..lkOOOOOOOOKd..').slice(10 + hx),
+    '..dkkkkkkkkKdd..',
+    '...dkkkkkkKdd...',
+  ];
+  const OTA_DIRS = {
+    down: {
+      ov: 2,
+      head: OTA_HEAD_TOP.concat([
+        '..hhhsssssshhg..',
+        '..hsssssssssSg..',
+        '..hseesssseeSg..',
+        '..gscsssSssScg..',
+        '...SsssmmsssS...',
+        '....SSssssSS....',
+      ]),
+      torso: [otaTorsoD(0), otaTorsoD(1), otaTorsoD(-1)],
+      legs: OLEGS_D,
+    },
+    up: {
+      ov: 2,
+      head: OTA_HEAD_TOP.concat([
+        '..hhhhghhhghgg..',
+        '..hhhghhhhhghg..',
+        '..shghhhhhhhgS..',
+        '..Sghhhhhhhggg..',
+        '...gggggggggg...',
+        '....SSSSSSSS....',
+      ]),
+      // the obi's drum knot (taiko) on her back, with the cord across it
+      torso: [[
+        '....lkkuukkK....',
+        '...lkkkkkkkKd...',
+        '..lkooooooooKd..',
+        '..lkoffffffoKd..',
+        '..lkofyyyyfoKd..',
+        '..dkoffffffoKd..',
+        '...dOOOOOOOOd...',
+      ], [
+        '....lkkuukkK....',
+        '...lkkkkkkkKd...',
+        '..lkooooooooKd..',
+        '..lkoffffffoKd..',
+        '..lkofyyyyfoKd..',
+        '..dkoffffffoKd..',
+        '...dOOOOOOOOdd..',
+      ], [
+        '....lkkuukkK....',
+        '...lkkkkkkkKd...',
+        '..lkooooooooKd..',
+        '..lkoffffffoKd..',
+        '..lkofyyyyfoKd..',
+        '..dkoffffffoKd..',
+        '..ddOOOOOOOOd...',
+      ]],
+      legs: [OLEGS_D[0], OLEGS_D[2], OLEGS_D[1]],
+    },
+    left: {
+      ov: 3,
+      hx: -1,
+      head: [
+        '........gHhg....',
+        '.......hiHhhg...',
+        '........gGGg....',
+        '.....hHHhhhhg...',
+        '....hHihhhhhhg..',
+        '...hHhhhhhhhhg..',
+        '..sshhhhhhhhgg..',
+        '.ssssshhhhhhgg..',
+        '.seesSShhhhgg...',
+        '.cssSSSghhgg....',
+        '.msssSSSgg......',
+        '..SSSS..........',
+      ],
+      // rounded back, hands folded in front of the obi, the long sleeve hanging under them
+      torso: [0, 1, -1].map((dx) => {
+        const hand = (r, a) => r.slice(0, 3 + dx) + a + r.slice(5 + dx);
+        return [
+          '.....ukkkKd.....',
+          '....lkkkkkkKd...',
+          '...lkkkkkkkkKd..',
+          hand('...lffffffkKd...', 'ss'),
+          hand('...looooookKd...', 'SS'),
+          hand('...lKKkkkkkKd...', 'KK'),
+          '....dkkkkkKd....',
+        ];
+      }),
+      legs: OLEGS_L,
+    },
+  };
+  G.defChar('ota', () => adultChar(OTA, OTA_DIRS));
+
+  // ---------------- SHOTA (resident child): built on the kid rows like Haru ----------------
+  // messy brown hair, white t-shirt with a red 7, red shorts, white sneakers; optional blue cap
+  const SHOTA = G.pal({
+    h: '#5a3826', H: '#7c5034', i: '#a07048',
+    s: '#f2c8a0', S: '#d29a74', c: '#eea08a',
+    j: '#e8e4da', J: '#b4aea2', k: '#f8f6f0', O: '#e8e4da', o: '#b4aea2', t: '#e8e4da', T: '#b4aea2',
+    n: '#c03a34', N: '#8e2a26',
+    p: '#b8423a', P: '#88302a', q: '#f0ece4', Q: '#a29c94', a: '#4a6aa8',
+    b: '#3a5aa0', B: '#263e78', d: '#5a7cc0', v: '#1a2440',
+  });
+  G.SHOTA_PAL = SHOTA;
+  function shotaRows(cap) {
+    const K = G.KID_ROWS;
+    const sub2 = (rows, map) => rows.map((r, i) => (map[i] ? map[i](r) : r));
+    const setAt = (r, i, ch) => r.slice(0, i) + ch + r.slice(i + 1);
+    // legs: shorts on the top two rows, bare shins below
+    const shins = (rows) => rows.map((r, i) => (i >= 2 && i <= 3 ? r.replace(/p/g, 's').replace(/P/g, 'S') : r));
+    // sneakers get a blue stripe
+    const sneak = (rows) => rows.map((r) => r);
+    const legs = (r) => sneak(shins(r));
+    // front torso: short sleeves (row 1), bare arms below, a red number 7 on the chest
+    const TD = K.TORSO_D.map((r, i) => {
+      if (i >= 2 && i <= 4) r = setAt(setAt(r, 2, 's'), 13, 'S');
+      if (i === 1) r = setAt(setAt(r, 2, 'k'), 13, 'J');
+      return r.replace(/t/g, 'j');
+    });
+    TD[1] = setAt(setAt(setAt(TD[1], 6, 'n'), 7, 'n'), 8, 'n');
+    TD[2] = setAt(TD[2], 8, 'N');
+    TD[3] = setAt(TD[3], 7, 'n');
+    const TU = K.TORSO_U.map((r, i) => {
+      if (i >= 2 && i <= 4) r = setAt(setAt(r, 2, 's'), 13, 'S');
+      if (i === 1) r = setAt(setAt(r, 2, 'k'), 13, 'J');
+      return r.replace(/O(?=O)|(?<=O)O/g, 'j');
+    });
+    TU[1] = setAt(setAt(setAt(TU[1], 6, 'n'), 7, 'n'), 8, 'n');
+    TU[2] = setAt(TU[2], 8, 'N');
+    TU[3] = setAt(TU[3], 7, 'n');
+    // side: the sleeve is the top of the arm, the forearm is bare
+    const sideT = (rows) => rows.map((r, i) => {
+      if (i === 2) return r.replace(/OO/g, 'JJ').replace(/O/g, 'j');
+      if (i >= 3) return r.replace(/O/g, 's');
+      return r;
+    });
+    // messy hair: tufts sticking up and out
+    const HD = K.HEAD_D.slice(), HU = K.HEAD_U.slice(), HL = K.HEAD_L.slice();
+    HD[0] = '....h.hhhh.h....'; HD[1] = '...hhhHHhhhhhh..'; HD[3] = 'hhhHhhhhhhhhhhh.'; HD[6] = '.hhshhhsshhhshhh';
+    HU[0] = '....h.hhhh.h....'; HU[1] = '...hhhHHhhhhhh..'; HU[3] = 'hhhHhhhhhhhhhhh.'; HU[6] = '.hhhhhhhhhhhhhhh'; HU[10] = '..hhhhhhhhhhhh.h';
+    HL[0] = '.....hhh.hh.h...'; HL[1] = '...hhhHHhhhhhh..'; HL[3] = '.hhHhhhhhhhhhhhh'; HL[5] = '.hhhhhhhhhhhhhh.'; HL[9] = '.ssessssShhhhhhh';
+    if (cap) {
+      // blue cap: crown over the top rows, brim over the forehead (front) / sticking out (side)
+      HD[0] = '.....bbbbbb.....'; HD[1] = '...bbdbbbbbBb...'; HD[2] = '..bdbbbbbbbbBb..'; HD[3] = '.hbbbbbbbbbbbBh.'; HD[4] = '.hbbbbaabbbbbBh.'; HD[5] = '.dddddddddddddB.'; HD[6] = '.hvvvvvvvvvvvvh.'; HD[7] = '.hhsssssssssshh.';
+      HU[0] = '.....bbbbbb.....'; HU[1] = '...bbdbbbbbBb...'; HU[2] = '..bdbbbbbbbbBb..'; HU[3] = '.hbbbbbbbbbbbBh.'; HU[4] = '.hbBBbbbbbbBBBh.'; HU[5] = '.hhhhvvvvvvhhhh.';
+      HL[0] = '.....bbbbbb.....'; HL[1] = '...bbdbbbbbBb...'; HL[2] = '..bdbbbbbbbbBb..'; HL[3] = '.bbbbbbbbbbbbBh.'; HL[4] = 'dddddbbbbbbbBhh.'; HL[5] = '.vvvvhhhhhhhhhh.';
+    }
+    return {
+      HD, HU, HL, TD, TU,
+      TL: sideT(K.TORSO_L), TLA: sideT(K.TORSO_L_A), TLB: sideT(K.TORSO_L_B),
+      LD: legs(K.LEGS_D), LDA: legs(K.LEGS_D_A), LDB: legs(K.LEGS_D_B),
+      LL: legs(K.LEGS_L), LLA: legs(K.LEGS_L_A), LLB: legs(K.LEGS_L_B),
+    };
+  }
+  function shotaChar(cap) {
+    const R = shotaRows(cap);
+    const P = Object.assign({}, G.KIDPAL, SHOTA);
+    const b = (hd, tr, lg, bob) => G.frame(G.kidBuild(hd, tr, lg, { pal: P, bob: bob || 0 }), 9, 25);
+    return {
+      down: [b(R.HD, R.TD, R.LD), b(R.HD, R.TD, R.LDA, 1), b(R.HD, R.TD, R.LDB, 1)],
+      up: [b(R.HU, R.TU, R.LD), b(R.HU, R.TU, R.LDB, 1), b(R.HU, R.TU, R.LDA, 1)],
+      left: [b(R.HL, R.TL, R.LL), b(R.HL, R.TLA, R.LLA, 1), b(R.HL, R.TLB, R.LLB, 1)],
+    };
+  }
+  G.SHOTA_ROWS = shotaRows;
+  G.defChar('shota', () => shotaChar(false));
+  G.defChar('shota_cap', () => shotaChar(true));
 
   // ---------------- NURSE: Mr. Sato, light-blue scrubs, lanyard, kind tired face ----------------
   const NURSE = G.pal({

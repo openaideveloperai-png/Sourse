@@ -4,7 +4,7 @@
 // G.MAPS[id] = {
 //   name, w (auto), h (auto), tiles: [...rows], floor: {'.':'wood', ',':'carpet_red'}, wall: 'green',
 //   dark: 0..1, light: playerLightRadius, music, ambience, ceiling: '#hex',
-//   objects: [ {id, x, y, w, h, sprite|char, dir, solid, z, on*, touch*, cond, light, door, lock, hide, push} ],
+//   objects: [ {id, x, y, w, h, sprite|char, dir, solid, z, alpha, on*, touch*, cond, light, door, lock, hide, push} ],
 //   enter*: generator run after every entry,  first*: generator run on first entry,  update(E, dt)
 // }
 (function (G) {
@@ -16,7 +16,7 @@
 
   // ---------------- game state ----------------
   G.newState = function () {
-    return { map: null, x: 0, y: 0, dir: 'down', items: [], flags: {}, time: 0, deaths: 0, notes: [], chapter: '', ending: null };
+    return { map: null, x: 0, y: 0, dir: 'down', items: [], flags: {}, time: 0, deaths: 0, notes: [], chapter: '', chapterShort: '', ending: null };
   };
   G.S = G.newState();
   G.flag = (k) => G.S.flags[k];
@@ -56,7 +56,23 @@
     }
   };
   Room.prototype.isSolid = function (c, r) { return c < 0 || r < 0 || c >= this.w || r >= this.h ? true : this.solid[r * this.w + c] === 1; };
-  Room.prototype.obj = function (id) { return this.objects.find((o) => o.id === id); };
+  // temp actors (E.spawn) win over a map object with the same id
+  Room.prototype.obj = function (id) { return this.objects.find((o) => o.id === id && o.temp) || this.objects.find((o) => o.id === id); };
+  // runtime actors: exist until despawned or until the room is loaded again
+  Room.prototype.spawn = function (def) {
+    this.despawn(def.id);
+    const o = new Obj(this, def, this.objects.length, true);
+    this.objects.push(o);
+    this.refresh();
+    return o;
+  };
+  Room.prototype.despawn = function (id) {
+    const i = this.objects.findIndex((o) => o.id === id && o.temp);
+    if (i < 0) return false;
+    this.objects.splice(i, 1);
+    this.refresh();
+    return true;
+  };
   Room.prototype.boxHits = function (l, t, r, b) {
     const c0 = Math.floor(l / TS), c1 = Math.floor((r - 0.001) / TS), r0 = Math.floor(t / TS), r1 = Math.floor((b - 0.001) / TS);
     for (let rr = r0; rr <= r1; rr++) for (let cc = c0; cc <= c1; cc++) if (this.isSolid(cc, rr)) return true;
@@ -64,10 +80,13 @@
   };
 
   // ---------------- objects ----------------
-  function Obj(room, def, i) {
+  // temp = true: a runtime actor (E.spawn) whose state lives on the object, never in G.S.flags
+  function Obj(room, def, i, temp) {
     this.room = room;
     this.def = def;
     this.id = def.id || '_o' + i;
+    this.temp = !!temp;
+    this.tstate = {};
     this.w = def.w || 1;
     this.h = def.h || 1;
     this.baseX = def.x;
@@ -80,25 +99,36 @@
   }
   G.Obj = Obj;
   Obj.prototype.key = function (k) { return '@' + k + ':' + this.room.id + ':' + this.id; };
+  // per-object state: saved flags for map objects, a plain field bag for temp actors
+  Obj.prototype.st = function (k) { return this.temp ? this.tstate[k] : G.S.flags[this.key(k)]; };
+  Obj.prototype.setSt = function (k, v) {
+    if (this.temp) { if (v === undefined) delete this.tstate[k]; else this.tstate[k] = v; }
+    else if (v === undefined) delete G.S.flags[this.key(k)];
+    else G.S.flags[this.key(k)] = v;
+  };
   Obj.prototype.update = function () {
-    const pos = G.S.flags[this.key('pos')];
+    const pos = this.st('pos');
     this.x = pos ? pos[0] : this.baseX;
     this.y = pos ? pos[1] : this.baseY;
-    const d = G.S.flags[this.key('dir')];
+    const d = this.st('dir');
     if (d) this.dir = d;
-    const hidden = G.S.flags[this.key('hidden')];
-    const shown = G.S.flags[this.key('shown')];
-    let vis = this.def.cond ? !!this.def.cond(G.EV.api) : true;
+    const hidden = this.st('hidden');
+    const shown = this.st('shown');
+    let vis = true;
+    if (this.def.cond) { try { vis = !!this.def.cond(G.EV.api); } catch (e) { G.contentError('cond of ' + this.room.id + ':' + this.id, e); } }
     if (hidden) vis = false;
     if (shown) vis = true;
     this.visible = vis;
     this.solid = this.def.solid === undefined ? !this.def.touch && !this.def.floor : !!this.def.solid;
     if (this.def.char && this.def.solid === undefined) this.solid = true;
-    const sp = G.S.flags[this.key('sprite')];
+    const sp = this.st('sprite');
     this.sprite = sp || (typeof this.def.sprite === 'function' ? this.def.sprite(G.EV.api) : this.def.sprite);
-    this.char = G.S.flags[this.key('char')] || this.def.char;
+    this.char = this.st('char') || this.def.char;
+    this.pose = this.st('pose') || null;
+    const al = this.st('alpha');
+    this.alpha = al !== undefined ? al : this.def.alpha === undefined ? 1 : this.def.alpha;
   };
-  Obj.prototype.setPos = function (x, y) { G.S.flags[this.key('pos')] = [x, y]; this.update(); this.room.refresh(); };
+  Obj.prototype.setPos = function (x, y) { this.setSt('pos', [x, y]); this.update(); this.room.refresh(); };
   // pixel rect of the footprint
   Obj.prototype.rect = function () { return { x: this.x * TS + this.offX, y: this.y * TS + this.offY, w: this.w * TS, h: this.h * TS }; };
   // anchor for drawing: bottom-center of footprint
@@ -113,13 +143,67 @@
     if (!this.visible) return;
     const a = this.anchor();
     if (this.def.draw) { this.def.draw(ctx, ox + a.x, oy + a.y, t, this); return; }
-    if (this.char) {
-      ctx.fillStyle = 'rgba(8,4,14,0.35)';
+    if (this.alpha <= 0) return;
+    if (this.char || this.pose) {
+      ctx.fillStyle = 'rgba(8,4,14,' + (0.35 * this.alpha).toFixed(3) + ')';
       ctx.fillRect(Math.round(ox + a.x - 5), Math.round(oy + a.y - 2), 10, 2);
-      G.drawChar(ctx, this.char, ox + a.x, oy + a.y - 1, this.dir, this.walkT, this.alpha);
+      if (this.pose) G.drawSprite(ctx, this.pose, ox + a.x, oy + a.y - 1, t + (this.def.phase || 0), this.dir === 'right', this.alpha);
+      else G.drawChar(ctx, this.char, ox + a.x, oy + a.y - 1, this.dir, this.walkT, this.alpha);
       return;
     }
     if (this.sprite) G.drawSprite(ctx, this.sprite, ox + a.x, oy + a.y, t + (this.def.phase || 0), this.def.flip, this.alpha);
+  };
+
+  // content functions (cond, dynamic map fields) must not take the game down: log once and go on
+  const reported = {};
+  G.contentError = function (where, e) {
+    if (reported[where]) return;
+    reported[where] = true;
+    console.error('content error in ' + where + ':', e);
+  };
+
+  // ---------------- walk cycle ----------------
+  // Every walker (player, follower, NPCs, chaser) advances its walk clock by the DISTANCE it moved,
+  // so the legs match the ground at any speed and never skate. 1.0 of walkT = G.WALK_STRIDE px:
+  // at the player's walking speed that is 8 animation frames per second, one step per tile.
+  // Coming from a standstill the first frame is already a step (feet alternate between starts).
+  // walkT === null means standing. Returns true on a footfall (for step sounds).
+  G.WALK_STRIDE = 62;
+  G.walkClock = function (s, dist) {
+    if (!(dist > 0.01)) { s.walkT = null; return false; }
+    let fresh = false;
+    if (s.walkT === null || s.walkT === undefined) { s.foot = !s.foot; s.walkT = s.foot ? 0.125 : 0.375; fresh = true; }
+    const before = Math.floor(s.walkT * 8);
+    s.walkT += dist / G.WALK_STRIDE;
+    const after = Math.floor(s.walkT * 8);
+    return fresh || (after !== before && after % 2 === 1);
+  };
+  const DIRV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  G.DIRV = DIRV;
+  G.dirOf = (dx, dy) => (Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up');
+
+  // The free floor tile where you stand to use object o (a door, a wardrobe): its own tile for
+  // walk-on objects, else the free tile below it, else beside it, else above it. With a start tile,
+  // the reachable candidate with the shortest path wins within each group. null if none.
+  G.frontTile = function (room, o, fromC, fromR) {
+    const groups = [[], [], [], []];
+    if (!o.solid || (o.def.door && o.def.door.walk)) for (let r = o.y; r < o.y + o.h; r++) for (let c = o.x; c < o.x + o.w; c++) groups[0].push([c, r]);
+    for (let c = o.x; c < o.x + o.w; c++) groups[1].push([c, o.y + o.h]);
+    for (let r = o.y + o.h - 1; r >= o.y; r--) { groups[2].push([o.x - 1, r]); groups[2].push([o.x + o.w, r]); }
+    for (let c = o.x; c < o.x + o.w; c++) groups[3].push([c, o.y - 1]);
+    const free = ([c, r]) => !room.isSolid(c, r) || (groups[0].length && c >= o.x && c < o.x + o.w && r >= o.y && r < o.y + o.h && !room.tileSolid(c, r));
+    for (const g of groups) {
+      const f = g.filter(free);
+      if (!f.length) continue;
+      if (fromC === undefined) return f[0];
+      let best = null, bl = 1e9;
+      for (const [c, r] of f) {
+        const pa = c === fromC && r === fromR ? [] : G.findPath(room, fromC, fromR, c, r);
+        if (pa && pa.length < bl) { bl = pa.length; best = [c, r]; }
+      }
+      if (best) return best;
+    }
+    return null;
   };
 
   // ---------------- player ----------------
