@@ -92,7 +92,7 @@
     valve_red: 'switch', valve_blue: 'switch', valve_grey: 'switch', pipe_hot: 'painting_empty', pipe_heat: 'painting_empty', pipe_laundry: 'painting_empty',
     bench_cardigan: 'sofa', phone_booth_light: 'lamp', kids_drawing_tall: 'paper', lift_doors_in: 'door_iron', lift_wall: 'painting_empty',
     tv_static: 'tv_crt', window_frosted_shadow: 'window_frosted', haru_futon_empty: 'futon', ota_kneel: 'statue', kuroda_play: 'statue',
-    old_haru_bed: 'bed_white', tama_sit: 'sparkle', tama_chirp: 'sparkle', tama_carrier: 'chest', caretaker_face: 'caretaker_raised',
+    old_haru_bed: 'bed_white', barricade: 'crate', tama_sit: 'sparkle', tama_chirp: 'sparkle', tama_carrier: 'chest', caretaker_face: 'caretaker_raised',
   };
   // missing art is drawn as a labelled magenta box so it is easy to spot (and listed in G.missingArt)
   G.missingArt = {};
