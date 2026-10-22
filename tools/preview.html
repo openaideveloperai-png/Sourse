@@ -13,6 +13,7 @@
 <script src="../js/art/cast.js"></script>
 <script src="../js/art/danchi.js"></script>
 <script src="../js/art/props.js"></script>
+<script src="../js/art/extra.js"></script>
 <script src="../js/engine/world.js"></script>
 <script src="../js/engine/events.js"></script>
 <script>
@@ -36,6 +37,45 @@ window.addEventListener('load', () => {
   const match = (n) => !only.length || only.some((o) => n.startsWith(o));
   if (G.KID && G.KID.build) G.KID.build();
   if (G.GAME && G.GAME.boot) try { G.GAME.boot(); } catch (e) {}
+  // ?walk=1: walk-cycle filmstrips (sequence 0,1,0,2,0,1,0,2) for every character in all four
+  // directions, on a ground line with a grid, to check that steps alternate smoothly
+  if (q.get('walk')) {
+    const names = G.charNames().filter((n) => match('char:' + n) || match(n));
+    const seq = [0, 1, 0, 2, 0, 1, 0, 2];
+    const dirs = ['down', 'left', 'right', 'up'];
+    const cw = 30, ch = 52;
+    const cv = document.getElementById('c');
+    const sc = S;
+    cv.width = 90 + seq.length * cw * sc; cv.height = names.length * (dirs.length * ch * sc + 16) + 20;
+    const x = cv.getContext('2d'); x.imageSmoothingEnabled = false;
+    x.fillStyle = q.get('bg') || '#4a4652'; x.fillRect(0, 0, cv.width, cv.height);
+    let y = 0;
+    for (const n of names) {
+      x.fillStyle = '#fff'; x.font = '12px monospace'; x.fillText('char:' + n, 4, y + 12); y += 16;
+      const c = G.getChar(n);
+      for (const d of dirs) {
+        x.fillStyle = '#ccc'; x.fillText(d, 4, y + ch * sc / 2);
+        let arr = c[d], flip = false;
+        if (!arr && d === 'right') { arr = c.left; flip = true; }
+        seq.forEach((fi, k) => {
+          const f = arr[fi] || arr[0];
+          const ox = 90 + k * cw * sc, base = y + (ch - 6) * sc;
+          x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(ox, y, cw * sc - 2, ch * sc - 2);
+          x.fillStyle = 'rgba(255,255,255,0.25)'; x.fillRect(ox, base, cw * sc - 2, 1);
+          for (let gy = base - 8 * sc; gy > y; gy -= 8 * sc) { x.fillStyle = 'rgba(255,255,255,0.07)'; x.fillRect(ox, gy, cw * sc - 2, 1); }
+          x.save();
+          const px = ox + (cw * sc) / 2;
+          if (flip) { x.translate(px, 0); x.scale(-1, 1); x.translate(-px, 0); }
+          x.drawImage(f.c, Math.round(px - f.ax * sc), Math.round(base - f.ay * sc), f.w * sc, f.h * sc);
+          x.restore();
+          x.fillStyle = '#aaa'; x.font = '10px monospace'; x.fillText(String(fi), ox + 2, y + 10);
+        });
+        y += ch * sc;
+      }
+    }
+    document.title = 'ready';
+    return;
+  }
   const groups = [];
   // ?portraits=1 shows every portrait in G.PORTRAITS with all its expressions
   if (q.get('portraits')) {
