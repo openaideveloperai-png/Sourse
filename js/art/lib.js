@@ -108,12 +108,18 @@
   G.drawChar = function (ctx, name, x, y, dir, walkT, alpha) {
     const ch = G.getChar(name);
     if (!ch) { if (name) G.drawMissing(ctx, 'char:' + name, x, y, name); return; }
-    const seq = [0, 1, 0, 2];
-    const f = walkT === null || walkT === undefined ? 0 : seq[Math.floor(walkT * 8) % 4];
     let arr = ch[dir];
     let flip = false;
     if (!arr && dir === 'right') { arr = ch.left; flip = true; }
     if (!arr) arr = ch.down;
+    // 3 frames: stand, step A, step B, played 0,1,0,2. 5+ frames: stand + a full walk cycle
+    // (step, passing, step, passing...) played in order. walkT advances 8 frames per unit.
+    let f = 0;
+    if (walkT !== null && walkT !== undefined) {
+      const k = Math.floor(walkT * 8);
+      if (arr.length >= 5) { const n = arr.length - 1; f = 1 + ((((k - 1) % n) + n) % n); }
+      else f = [0, 1, 0, 2][k % 4];
+    }
     G.drawFrame(ctx, arr[f] || arr[0], x, y, flip, alpha);
   };
 

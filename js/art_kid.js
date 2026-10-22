@@ -141,6 +141,24 @@
     '..QqQQ..qqqqQ...',
     '..QQQQ..QQQQQ...',
   ];
+  // passing poses (between steps): A = near leg planted, far foot lifting behind;
+  // B = far leg planted, near foot swinging through under the body
+  const LEGS_L_PA = [
+    '......pppp......',
+    '......pppP......',
+    '......pppPP.....',
+    '......pppPPQ....',
+    '.....qqqqQ.QQ...',
+    '.....QQQQQ......',
+  ];
+  const LEGS_L_PB = [
+    '......pppp......',
+    '......pPPP......',
+    '......pPPP......',
+    '.....qqpPP......',
+    '....qqqQPP......',
+    '.......QQQQQ....',
+  ];
   const TORSO_L_A = [
     '.....jjjjjjJ....',
     '....kjjjjjjjJ...',
@@ -159,7 +177,7 @@
   ];
   const BAG_L = ['.bb.', 'bbbB', 'bOOB', '.BB.'];
 
-  G.KID_ROWS = { HEAD_D, TORSO_D, LEGS_D, LEGS_D_A, LEGS_D_B, HEAD_U, TORSO_U, HEAD_L, TORSO_L, TORSO_L_A, TORSO_L_B, LEGS_L, LEGS_L_A, LEGS_L_B };
+  G.KID_ROWS = { HEAD_D, TORSO_D, LEGS_D, LEGS_D_A, LEGS_D_B, HEAD_U, TORSO_U, HEAD_L, TORSO_L, TORSO_L_A, TORSO_L_B, LEGS_L, LEGS_L_A, LEGS_L_B, LEGS_L_PA, LEGS_L_PB };
   function build(head, torso, legs, opts) {
     opts = opts || {};
     const px = new G.PX(18, 26);

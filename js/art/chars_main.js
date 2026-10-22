@@ -28,7 +28,15 @@
     return {
       down: [b(head.down, K.TORSO_D, K.LEGS_D), b(head.down, K.TORSO_D, K.LEGS_D_A, 1), b(head.down, K.TORSO_D, K.LEGS_D_B, 1)],
       up: [b(head.up, K.TORSO_U, K.LEGS_D), b(head.up, K.TORSO_U, K.LEGS_D_B, 1), b(head.up, K.TORSO_U, K.LEGS_D_A, 1)],
-      left: [b(head.left, K.TORSO_L, K.LEGS_L), b(head.left, K.TORSO_L_A, K.LEGS_L_A, 1), b(head.left, K.TORSO_L_B, K.LEGS_L_B, 1)],
+      // side walk: idle + 4 frames (step, passing, step, passing); the visible (near) arm swings
+      // opposite to the near leg: near leg forward (LEGS_L_A) -> arm back (TORSO_L_B)
+      left: [
+        b(head.left, K.TORSO_L, K.LEGS_L),
+        b(head.left, K.TORSO_L_B, K.LEGS_L_A, 1),
+        b(head.left, K.TORSO_L, K.LEGS_L_PA, 0),
+        b(head.left, K.TORSO_L_A, K.LEGS_L_B, 1),
+        b(head.left, K.TORSO_L, K.LEGS_L_PB, 0),
+      ],
     };
   }
 

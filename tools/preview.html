@@ -57,7 +57,9 @@ window.addEventListener('load', () => {
         x.fillStyle = '#ccc'; x.fillText(d, 4, y + ch * sc / 2);
         let arr = c[d], flip = false;
         if (!arr && d === 'right') { arr = c.left; flip = true; }
-        seq.forEach((fi, k) => {
+        const n = arr.length - 1;
+        const sq = arr.length >= 5 ? Array.from({ length: 8 }, (_, k) => 1 + (k % n)) : seq;
+        sq.forEach((fi, k) => {
           const f = arr[fi] || arr[0];
           const ox = 90 + k * cw * sc, base = y + (ch - 6) * sc;
           x.fillStyle = 'rgba(0,0,0,0.18)'; x.fillRect(ox, y, cw * sc - 2, ch * sc - 2);
