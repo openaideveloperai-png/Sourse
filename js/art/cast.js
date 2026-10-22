@@ -141,25 +141,88 @@
   // ======================================================================
   // ADULTS: 16-wide string rows like the kid sprites, taller bodies
   // ======================================================================
-  // dirs: {down|up|left: {head, torso:[3], legs:[3], hx, extra(step) -> [[rows,x,y,fixed]]}}
+  // dirs: {down|up|left: {head, torso:[1 or 3], legs:[3 or 5], hx, swing:[lc, rc], extra(k, f) -> [[rows,x,y,fixed]]}}
+  // 3 leg blocks: stand, step A, step B (played 0,1,0,2). 5 leg blocks (side views): stand, A (near
+  // leg forward), passing, B (far leg forward), passing, played as stand + full cycle. Torso index
+  // k: 0 arms down, 1 near arm forward, 2 near arm back; the arm always swings against the near leg.
+  // A single front/back torso gets its arm swing from `swing` (the two arm columns).
   function adultChar(pal, dirs, ov) {
     const out = {};
     for (const d of ['down', 'up', 'left']) {
       const D = dirs[d];
-      out[d] = [0, 1, 2].map((k) => {
-        const head = D.head, torso = D.torso[k] || D.torso[0], legs = D.legs[k];
+      const plan = D.legs.length >= 5
+        ? [[0, 0, 0], [2, 1, 1], [0, 2, 0], [1, 3, 1], [0, 4, 0]]
+        : [[0, 0, 0], [1, 1, 1], [2, 2, 1]];
+      out[d] = plan.map(([k, li, bob], f) => {
+        const head = D.head, legs = D.legs[li];
+        let torso = D.torso[k] || D.torso[0];
+        if (k && D.torso.length === 1 && D.swing) torso = swingArms(torso, D.swing, k);
         const H = head.length + torso.length + legs.length - (ov || 0);
-        const bob = k ? 1 : 0;
         const yl = H - legs.length, yt = yl - torso.length + bob, yh = yt - head.length + (ov || 0);
         const layers = [];
-        if (D.back) for (const e of D.back(k)) layers.push([e[0], e[1], e[2] + (e[3] ? 0 : yt)]);
+        if (D.back) for (const e of D.back(k, f)) layers.push([e[0], e[1], e[2] + (e[3] ? 0 : yt)]);
         layers.push([legs, 0, yl], [torso, 0, yt], [head, D.hx || 0, yh]);
-        if (D.extra) for (const e of D.extra(k)) layers.push([e[0], e[1], e[2] + (e[3] ? 0 : yt)]);
+        if (D.extra) for (const e of D.extra(k, f)) layers.push([e[0], e[1], e[2] + (e[3] ? 0 : yt)]);
         return fig(pal, 16, H, layers, 8, D.post ? (px) => D.post(px, k, yt + 1, yh + 1) : null);
       });
     }
     return out;
   }
+  // front/back arm swing on a torso block: k 1 = left hand 1px higher (swung away), right hand
+  // 1px lower (swung toward the viewer); k 2 the other way round. cols: the two arm columns.
+  function swingArms(rows, cols, k) {
+    const g = rows.map((r) => r.split(''));
+    const bottom = (c) => { for (let y = g.length - 1; y >= 0; y--) if (g[y][c] !== '.') return y; return -1; };
+    const shorten = (c) => { const y = bottom(c); if (y > 0) { g[y - 1][c] = g[y][c]; g[y][c] = '.'; } };
+    const lengthen = (c) => { const y = bottom(c); if (y > 0 && y + 1 < g.length) { g[y + 1][c] = g[y][c]; g[y][c] = g[y - 1][c]; } };
+    if (k === 1) { shorten(cols[0]); lengthen(cols[1]); } else { lengthen(cols[0]); shorten(cols[1]); }
+    return g.map((r) => r.join(''));
+  }
+  // Side-view legs (facing left) built from a few numbers so every adult walks the same way.
+  // n leg rows + 2 shoe rows. Poses: stand; A near leg forward (far heel up); passing (far foot
+  // lifted behind, knee bent); B far leg forward (near heel up); passing (near foot swinging
+  // through, lifted 2px). The hip row never moves; feet always land on the bottom row.
+  // o: {n, hip (near leg's left column), w, fw (widths), fo (far leg offset), s (stride), shoe,
+  //     p/e near fill/back edge, F far fill, q/Q near shoe, QF far shoe}
+  function sideLegs(o) {
+    const n = o.n, W = o.W || 16, w = o.w || 3, fw = o.fw || 2, shoe = o.shoe || 5, s = o.s || 3;
+    const fo = o.fo === undefined ? w - fw + 1 : o.fo;
+    const pose = (near, far) => {
+      const g = Array.from({ length: n + 2 }, () => Array(W).fill('.'));
+      const put = (x, y, ch) => { if (x >= 0 && x < W && y >= 0 && y < n + 2) g[y][x] = ch; };
+      const rnd = (v) => Math.sign(v) * Math.round(Math.abs(v));
+      const leg = (L, x0, wid, fill, edge, sf, se) => {
+        const m = n - (L.lift || 0);
+        let ax = x0;
+        for (let r = 0; r < m; r++) {
+          const t = m > 1 ? r / (m - 1) : 1;
+          const sh = L.mode === 'knee' ? Math.max(0, 2 * t - 1) : L.mode === 'thigh' ? Math.min(1, 1.6 * t) : t;
+          ax = x0 + rnd(L.dx * sh);
+          for (let i = 0; i < wid; i++) put(ax + i, r, edge && i === wid - 1 ? edge : fill);
+        }
+        const t0 = ax - (shoe - wid), t1 = ax + wid - 1;
+        if (L.toe) {
+          // heel up: the shoe tips forward onto its toe
+          for (let x = t0 + 1; x <= t1; x++) put(x, m, x === t1 ? se : sf);
+          for (let x = t0; x <= t1 - 1; x++) put(x, m + 1, se);
+        } else {
+          for (let x = t0; x <= t1; x++) put(x, m, x === t1 ? se : sf);
+          for (let x = t0; x <= t1; x++) put(x, m + 1, se);
+        }
+      };
+      leg(far, o.hip + fo, fw, o.F || 'P', null, o.QF || 'Q', o.QF || 'Q');
+      leg(near, o.hip, w, o.p || 'p', o.e || null, o.q || 'q', o.Q || 'Q');
+      return g.map((r) => r.join(''));
+    };
+    return [
+      pose({ dx: 0 }, { dx: 0 }),
+      pose({ dx: -s }, { dx: s, toe: 1 }),
+      pose({ dx: 0 }, { dx: o.lb === undefined ? 2 : o.lb, lift: 1, mode: 'knee' }),
+      pose({ dx: s, toe: 1 }, { dx: -s }),
+      pose({ dx: -(o.lf === undefined ? 2 : o.lf), lift: o.ln || 2, mode: 'thigh' }, { dx: 0 }),
+    ];
+  }
+  G.SIDE_LEGS = sideLegs;
   // shared leg blocks: p/P trousers or stockings, q/Q shoes
   const LEGS_TROUSER = {
     down: [
@@ -167,11 +230,7 @@
       ['.....pppppP.....', '.....ppPppP.....', '.....ppPppP.....', '.....ppPppP.....', '.....ppPppP.....', '....qqqQppP.....', '....QQQ.qqqQ....', '........QQQ.....'],
       ['.....pppppP.....', '.....ppPppP.....', '.....ppPppP.....', '.....ppPppP.....', '.....ppPppP.....', '.....ppPqqqQ....', '....qqqQQQQ.....', '....QQQ.........'],
     ],
-    left: [
-      ['......pppP......', '......pppP......', '......pppP......', '......pppP......', '......pppP......', '......pppP......', '....qqqqqQ......', '....QQQQQQ......'],
-      ['......pppP......', '.....pppPPP.....', '.....ppP.PPP....', '....ppP...PPP...', '....ppP....PP...', '...ppP.....PP...', '.qqqqQ....QQQ...', '.QQQQQ.....QQ...'],
-      ['......PppP......', '.....PPPppp.....', '....PPP..ppP....', '....PP....ppP...', '....PP.....ppP..', '....PP.....ppP..', '..QQQQ...qqqqQ..', '..QQQQ...QQQQQ..'],
-    ],
+    left: sideLegs({ n: 6, hip: 6, w: 3, fw: 3, fo: 1, s: 3, shoe: 5 }),
   };
   LEGS_TROUSER.up = [LEGS_TROUSER.down[0], LEGS_TROUSER.down[2], LEGS_TROUSER.down[1]];
   // thin legs under a coat or dress (6 rows)
@@ -181,11 +240,7 @@
       ['.....pP..pP.....', '.....pP..pP.....', '.....pP..pP.....', '....qqQ..pP.....', '....QQQ..qqQ....', '.........QQQ....'],
       ['.....pP..pP.....', '.....pP..pP.....', '.....pP..pP.....', '.....pP..qqQ....', '....qqQ..QQQ....', '....QQQ.........'],
     ],
-    left: [
-      ['......pP........', '......pP........', '......pP........', '......pP........', '.....qqQ........', '.....QQQ........'],
-      ['......pPP.......', '.....pP..P......', '....pP....PP....', '....pP....PP....', '...qqQ....QQQ...', '...QQQ.....QQ...'],
-      ['......PpP.......', '.....PP..pP.....', '....PP....pP....', '....PP....pP....', '...QQQ....qqQ...', '...QQQ....QQQ...'],
-    ],
+    left: sideLegs({ n: 4, hip: 6, w: 2, fw: 2, fo: 0, e: 'P', s: 2, shoe: 3, lb: 1, lf: 1, ln: 1 }),
   };
   LEGS_SKIRT.up = [LEGS_SKIRT.down[0], LEGS_SKIRT.down[2], LEGS_SKIRT.down[1]];
 
@@ -227,7 +282,8 @@
         '...dAAAdAAAAd...',
       ]],
       legs: LEGS_SKIRT.down,
-      extra: (k) => [[ORANGES, 0 + (k === 2 ? 1 : 0), 7]],
+      swing: [2, 13],
+      extra: (k) => [[ORANGES, 0, [7, 6, 8][k]]],
     },
     up: {
       head: [
@@ -256,7 +312,8 @@
         '...dAAAAdAAAd...',
       ]],
       legs: LEGS_SKIRT.up,
-      extra: (k) => [[ORANGES, 12 - (k === 1 ? 1 : 0), 7]],
+      swing: [2, 13],
+      extra: (k) => [[ORANGES, 12, [7, 8, 6][k]]],
     },
     left: {
       head: [
@@ -307,7 +364,7 @@
         '....dAAAAAAAd...',
       ]],
       legs: LEGS_SKIRT.left,
-      extra: (k) => [[ORANGES, [6, 2, 10][k], 7]],
+      extra: (k) => [[ORANGES, [6, 3, 9][k], [7, 6, 7][k]]],
     },
   };
   G.defChar('yui', () => adultChar(YUI, YUI_DIRS));
@@ -318,7 +375,7 @@
     s: '#e6bc9a', S: '#c49274', r: '#a87862', e: '#261c26', m: '#8e5a50',
     j: '#3a3742', J: '#25232b', k: '#57525f', b: '#8a8070',
     t: '#e0dace', T: '#aca69a', x: '#6e2c36', X: '#4a1c26',
-    p: '#2f2d37', P: '#1e1c24', q: '#4a3630', Q: '#22181a',
+    p: '#403c4a', P: '#24222b', q: '#5a4036', Q: '#2a1c1c',
   });
   // thin trousers and old black shoes, 6 rows (shared by the down and up views)
   const KLEGS_D = [
@@ -326,11 +383,7 @@
     ['.....pppppP.....', '.....pP..pP.....', '.....pP..pP.....', '....qqQ..pP.....', '....QQQ..qqQ....', '.........QQQ....'],
     ['.....pppppP.....', '.....pP..pP.....', '.....pP..pP.....', '.....pP..qqQ....', '....qqQ..QQQ....', '....QQQ.........'],
   ];
-  const KLEGS_L = [
-    ['......pppP......', '......ppP.......', '......ppP.......', '......ppP.......', '....qqqqQ.......', '....QQQQQ.......'],
-    ['......pppP......', '.....ppPPP......', '.....pp..PP.....', '....pp....PP....', '..qqqqQ..QQQ....', '..QQQQ...QQ.....'],
-    ['......pppP......', '.....PPppP......', '.....PP..pp.....', '....PP....pp....', '..QQQQ...qqqQ...', '..QQQ....QQQQ...'],
-  ];
+  const KLEGS_L = sideLegs({ n: 4, hip: 6, w: 3, fw: 2, fo: 1, e: 'P', s: 2, shoe: 5, lb: 1, lf: 1, ln: 1 });
   const KURODA_DIRS = {
     down: {
       head: [
@@ -375,20 +428,20 @@
     },
     up: {
       head: [
-        '.....wWwwWw.....',
-        '...wwWsssSwwW...',
-        '..wwWsssssSWWV..',
-        '.wWwWsssSSWWWVV.',
-        'wWWwWWSSSWWVWVVv',
-        'wWVWwWWWWVWVWVVv',
-        '.sVWWVWVWVVVVVS.',
-        '.SvVWVVWVVvVVvS.',
-        '..vVVvVVvVVvVv..',
-        '...vVvvVvvVvv...',
-        '....SSssssSS....',
+        '......wW.Ww.....',
+        '...wWwsssSSwW...',
+        '..wWssssssSSWV..',
+        '.wWwssssssSSVVV.',
+        'wWWVsssssSSSVVvv',
+        'wWVVWsSSSSSVWVvv',
+        '.sVWVVWVVVVVVvS.',
+        '.SvVWVvVWvVVvvS.',
+        '..vVvVVvVvVvvv..',
+        '...vvvVvvvVvv...',
+        '....SSsssSSS....',
       ],
       torso: [[
-        '....kjjttjjJ....',
+        '....kjjjjjjJ....',
         '...kjjjjjjjjJ...',
         '...kJjjjjjjJJ...',
         '...kJjjjjjjJJ...',
@@ -396,7 +449,7 @@
         '...sJjjjJjjJS...',
         '....JJJJJJJJ....',
       ], [
-        '....kjjttjjJ....',
+        '....kjjjjjjJ....',
         '...kjjjjjjjjJ...',
         '...kJjjjjjjJJ...',
         '...kJjjjjjjJJ...',
@@ -404,7 +457,7 @@
         '...kJjjjJjjJ....',
         '...sJJJJJJJJ....',
       ], [
-        '....kjjttjjJ....',
+        '....kjjjjjjJ....',
         '...kjjjjjjjjJ...',
         '...kJjjjjjjJJ...',
         '...kJjjjjjjJJ...',
@@ -440,18 +493,18 @@
       ], [
         '.....tjjjJ......',
         '....xjjjjjJ.....',
-        '....jjjjkjJ.....',
-        '....jjjjjkJ.....',
-        '....jjjjjjkJ....',
-        '....jjjjjjJs....',
-        '....JJJJJJJ.....',
-      ], [
-        '.....tjjjJ......',
-        '....xjjjjjJ.....',
         '....jjkjjjJ.....',
         '....jkjjjjJ.....',
         '...kjjjjjjJ.....',
         '...sjjjjjjJ.....',
+        '....JJJJJJJ.....',
+      ], [
+        '.....tjjjJ......',
+        '....xjjjjjJ.....',
+        '....jjjjkjJ.....',
+        '....jjjjjkJ.....',
+        '....jjjjjjkJ....',
+        '....jjjjjjJs....',
         '....JJJJJJJ.....',
       ]],
       legs: KLEGS_L,
@@ -599,7 +652,7 @@
     const sub2 = (rows, map) => rows.map((r, i) => (map[i] ? map[i](r) : r));
     const setAt = (r, i, ch) => r.slice(0, i) + ch + r.slice(i + 1);
     // legs: shorts on the top two rows, bare shins below
-    const shins = (rows) => rows.map((r, i) => (i >= 2 && i <= 3 ? r.replace(/p/g, 's').replace(/P/g, 'S') : r));
+    const shins = (rows) => rows.map((r, i) => (i >= 2 ? r.replace(/p/g, 's').replace(/P/g, 'S') : r));
     // sneakers get a blue stripe
     const sneak = (rows) => rows.map((r) => r);
     const legs = (r) => sneak(shins(r));
@@ -641,7 +694,7 @@
       HD, HU, HL, TD, TU,
       TL: sideT(K.TORSO_L), TLA: sideT(K.TORSO_L_A), TLB: sideT(K.TORSO_L_B),
       LD: legs(K.LEGS_D), LDA: legs(K.LEGS_D_A), LDB: legs(K.LEGS_D_B),
-      LL: legs(K.LEGS_L), LLA: legs(K.LEGS_L_A), LLB: legs(K.LEGS_L_B),
+      LL: legs(K.LEGS_L), LLA: legs(K.LEGS_L_A), LLB: legs(K.LEGS_L_B), LLPA: legs(K.LEGS_L_PA), LLPB: legs(K.LEGS_L_PB),
     };
   }
   function shotaChar(cap) {
@@ -651,7 +704,8 @@
     return {
       down: [b(R.HD, R.TD, R.LD), b(R.HD, R.TD, R.LDA, 1), b(R.HD, R.TD, R.LDB, 1)],
       up: [b(R.HU, R.TU, R.LD), b(R.HU, R.TU, R.LDB, 1), b(R.HU, R.TU, R.LDA, 1)],
-      left: [b(R.HL, R.TL, R.LL), b(R.HL, R.TLA, R.LLA, 1), b(R.HL, R.TLB, R.LLB, 1)],
+      // side: stand + step, passing, step, passing like Haru; the arm swings against the near leg
+      left: [b(R.HL, R.TL, R.LL), b(R.HL, R.TLB, R.LLA, 1), b(R.HL, R.TL, R.LLPA), b(R.HL, R.TLA, R.LLB, 1), b(R.HL, R.TL, R.LLPB)],
     };
   }
   G.SHOTA_ROWS = shotaRows;
@@ -694,6 +748,7 @@
         '...AAAAAAAAAA...',
       ]],
       legs: LEGS_TROUSER.down,
+      swing: [2, 13],
     },
     up: {
       head: [
@@ -722,6 +777,7 @@
         '...AAAAAAAAAA...',
       ]],
       legs: LEGS_TROUSER.up,
+      swing: [2, 13],
     },
     left: {
       head: [
@@ -776,124 +832,563 @@
   };
   G.defChar('nurse', () => adultChar(NURSE, NURSE_DIRS));
 
-  // ---------------- MOM (1974): young, long black hair tied back, apron over a yellow dress ----------------
+  // ---------------- MOM (1958): Fumiko, a young night-shift nurse: white dress and cap, dark grey
+  // cardigan, black hair tied back in a low bun ----------------
   const MOM = G.pal({
-    h: '#221c28', H: '#3a3044', i: '#5a4e66', r: '#9a4a4a',
+    h: '#221c28', H: '#3a3044', i: '#5a4e66', r: '#6a3a44',
     s: '#f2cca8', S: '#d0a07e', c: '#eaa496', e: '#2a1e2a', m: '#b8685e',
-    y: '#d2b04e', Y: '#a88a34', u: '#e4c86a',
-    w: '#ece6d6', W: '#c6bea8', V: '#a29884',
-    p: '#dcb492', P: '#b48c6c', q: '#6a4232', Q: '#46281e',
+    g: '#4c4a56', G: '#36343e', n: '#686674', N: '#24222a',
+    w: '#ecebe6', W: '#c8c6c0', V: '#9e9c96', u: '#f8f6f0',
+    p: '#dcc6b0', P: '#b49c86', q: '#e6e4de', Q: '#9e9a92',
   });
-  const PONY_U = ['.r.', 'hHh', 'hHh', 'hhh', 'hHh', '.h.'];
   const MOM_DIRS = {
     down: {
       head: [
-        '......hhhh......',
-        '....hhHiHhhh....',
+        '.....uuuuuu.....',
+        '....uWuuuuWu....',
         '...hHiHhhhhhh...',
-        '..hHhhhhhhhhhh..',
+        '..hHiHhhhhhhhh..',
         '..hhhhhhshhhhh..',
         '..hhhssssssshh..',
         '..hssssssssssh..',
         '..hssessssesSh..',
-        '..hscesssSecSh..',
-        '...hsssmmsssh...',
-        '....hSssssSh....',
+        '..sscesssSecSS..',
+        '...ssssmmsssS...',
+        '....SSssssSS....',
       ],
       torso: [[
-        '....uywwwwyY....',
-        '...uyywwwwyyY...',
-        '..uuyywwwwyyYY..',
-        '..sYVwwwwwwVYS..',
-        '..sYVVVVVVVVYS..',
-        '..sYwwwwwwwwYS..',
-        '..SywwwwwwwwYS..',
-        '...ywwwwwwwwY...',
-        '...yWwwwwwwWY...',
-        '...YYWWWWWWYY...',
+        '....ngwVVwgG....',
+        '...nggwwwwggG...',
+        '..nnggwwwwggGG..',
+        '..nNggwwwwggNG..',
+        '..nNggwwwwggNG..',
+        '..nNggwVVwggNG..',
+        '..sNggwwwwggNS..',
+        '...gggwwwwggG...',
+        '...wwwwwwwwwW...',
+        '...WWWWWWWWWW...',
       ]],
       legs: LEGS_SKIRT.down,
+      swing: [2, 13],
     },
     up: {
       head: [
-        '......hhhh......',
-        '....hhHiHhhh....',
-        '...hHiHhhhhhh...',
-        '..hHhhhhhhhhhh..',
-        '..hhhhhHhhhhhh..',
-        '..hhhhhHhhhhhh..',
-        '..hhhhhhHhhhhh..',
-        '..hhhhhhHhhhhh..',
-        '..Shhhhhhhhhhs..',
+        '.....uuuuuu.....',
+        '....uWuuuuWu....',
+        '...hhHiHhhhhh...',
+        '..hHiHhhhhhhhh..',
+        '..hhhhhhhhhhhh..',
+        '..hhhhhrrhhhhh..',
+        '..hhhhHiHhhhhh..',
+        '..shhHhhhHhhhS..',
+        '..ShhhHHHhhhhS..',
         '...hhhhhhhhhh...',
-        '....hSSrrSSh....',
+        '....hSSSSSSh....',
       ],
       torso: [[
-        '....uyyyyyyY....',
-        '...uyyyyyyyyY...',
-        '..uuyyyyyyyyYY..',
-        '..sYyyyyyyyyYS..',
-        '..sYVVVwwVVVYS..',
-        '..sYyyywwyyyYS..',
-        '..SyyyyyyyyyYS..',
-        '...yyyyyyyyyY...',
-        '...yyyyyyyyyY...',
-        '...YYYYYYYYYY...',
+        '....ngggggG.....',
+        '...nggggggggG...',
+        '..nnggggggggGG..',
+        '..nNggggggggNG..',
+        '..nNggggggggNG..',
+        '..nNgggGGgggNG..',
+        '..sNggggggggNS..',
+        '...ggggggggggG..',
+        '...wwwwwwwwwW...',
+        '...WWWWWWWWWW...',
       ]],
       legs: LEGS_SKIRT.up,
-      extra: () => [[PONY_U, 6, -1]],
+      swing: [2, 13],
     },
     left: {
       head: [
-        '......hhhh......',
-        '....hhHiHhhh....',
+        '.....uuuuuu.....',
+        '....uWuuuuWu....',
         '...hHiHhhhhhh...',
         '..hHhhhhhhhhhh..',
-        '..hhhhhhhhhhhhr.',
-        '..ssshhhhhhhhhh.',
-        '..ssssssshhhhhh.',
-        '.ssesssSShhhhh..',
-        '..scsssShhhhh...',
-        '..msssSShhhh....',
+        '..hhhhhhhhhhhh..',
+        '..ssshhhhhhhhhr.',
+        '..ssssssshhhhhhh',
+        '.ssesssSShhhhHih',
+        '..scsssShhhhhhhh',
+        '..msssSShhhh.hh.',
         '...SssShhh......',
       ],
       torso: [[
-        '.....uyyyY......',
-        '....wwyyyyY.....',
-        '....wwyuuyY.....',
-        '....wwyuuyY.....',
-        '....VVVsVVY.....',
-        '....wwyyyyY.....',
-        '....wwyyyyY.....',
-        '....wwwyyyyY....',
-        '....wWwyyyyY....',
-        '....WWYYYYYY....',
+        '.....wggggG.....',
+        '....wwgggggG....',
+        '....wwgnNggG....',
+        '....wwgnNggG....',
+        '....wVgnNggG....',
+        '....wwgnNggG....',
+        '....wwgsSggG....',
+        '....wwgggggG....',
+        '....wwwwwwwwW...',
+        '....WWWWWWWWW...',
       ], [
-        '.....uyyyY......',
-        '....wwyyyyY.....',
-        '....wwuuyyY.....',
-        '....wuuyyyY.....',
-        '...suVVVVVY.....',
-        '....wwyyyyY.....',
-        '....wwyyyyY.....',
-        '....wwwyyyyY....',
-        '....wWwyyyyY....',
-        '....WWYYYYYY....',
+        '.....wggggG.....',
+        '....wwgggggG....',
+        '....wwnNgggG....',
+        '....wnNggggG....',
+        '...nNVgggggG....',
+        '..sSwwgggggG....',
+        '....wwgggggG....',
+        '....wwgggggG....',
+        '....wwwwwwwwW...',
+        '....WWWWWWWWW...',
       ], [
-        '.....uyyyY......',
-        '....wwyyyyY.....',
-        '....wwyyuuY.....',
-        '....wwyyyuuY....',
-        '....VVVVVVYs....',
-        '....wwyyyyY.....',
-        '....wwyyyyY.....',
-        '....wwwyyyyY....',
-        '....wWwyyyyY....',
-        '....WWYYYYYY....',
+        '.....wggggG.....',
+        '....wwgggggG....',
+        '....wwggnNgG....',
+        '....wwgggnNG....',
+        '....wVggggnNG...',
+        '....wwgggggGsS..',
+        '....wwgggggG....',
+        '....wwgggggG....',
+        '....wwwwwwwwW...',
+        '....WWWWWWWWW...',
       ]],
       legs: LEGS_SKIRT.left,
-      back: () => [[['hh', 'hH', 'Hh', 'hh', '.h'], 11, -1]],
     },
   };
   G.defChar('mom_memory', () => adultChar(MOM, MOM_DIRS));
+
+  // ======================================================================
+  // STAFF: the party guests are care staff, drawn at the Caretaker's scale (about 1.8x Haru):
+  // white pleated surgical masks with ear loops, striped paper party-hat cones, eyes lost in the
+  // shadow under the brow. staff1 cardigan over teal scrubs + lanyard; staff2 apron over rose
+  // scrubs, hair in a bun; staff3 older man, grey hair, glasses glinting, olive sweater.
+  // ======================================================================
+  // canvas 24x56, anchor (12, 54): shoes on rows 52-53, legs from the hip row 40, torso rows 24-39,
+  // neck 22-23, head 10-21, hat above. Head/torso/hat/arms bob down 1px on step frames.
+  const SW = 24, SH = 56, SCX = 12;
+  const S_HIP = 40, S_TOP = 24, S_HEAD = 10;
+  const STAFF_HEADS = {
+    short: {
+      down: [
+        '....hhhhhh....',
+        '..hhHHhhhhhh..',
+        '.hHHhhhhhhhjh.',
+        '.hHhhhhhhhhjh.',
+        '.hhhhhhhhhhjh.',
+        '.hhvhhhhhvhjj.',
+        '.hvvvvvvvvvvj.',
+        '.svvxvvvvxvvS.',
+        '.lmmmmmmmmmMl.',
+        '..nnnnnnnnnN..',
+        '..mmmmmmmmmM..',
+        '...MmmmmmmM...',
+      ],
+      up: [
+        '....hhhhhh....',
+        '..hhHHhhhhhh..',
+        '.hHHhhhhhhhjh.',
+        '.hHhhhhhhhhjh.',
+        '.hhhhhhhhhhjh.',
+        '.hhhhhhhhhhjh.',
+        '.hhhhhhhhhjjj.',
+        '.shhhhhhhhjjS.',
+        '.lhhhhhhhjjjl.',
+        '..hhhhhhjjjj..',
+        '...jjjjjjjj...',
+        '....SSSSSS....',
+      ],
+      left: [
+        '.....hhhhhh...',
+        '...hhHHhhhhhh.',
+        '..hHHhhhhhhhjh',
+        '..hHhhhhhhhhjh',
+        '.hhhhhhhhhhhjh',
+        '.hvhhhhhhhhjjh',
+        '.vvvvvvhhhhjj.',
+        'vvxvvvSshhhjj.',
+        'mmmmmMlShhjj..',
+        'nnnnnNlShjj...',
+        '.mmmmMSSjj....',
+        '..MmmM........',
+      ],
+    },
+    bun: {
+      down: [
+        '.....hHhh.....',
+        '....hHihhj....',
+        '..hhHhhhhhhh..',
+        '.hHhhhhhhhhjh.',
+        '.hHhhhhhhhhjh.',
+        '.hhhhhhhhhhjj.',
+        '.hhvvvvvvvvjh.',
+        '.hvvxvvvvxvvj.',
+        '.lmmmmmmmmmMl.',
+        '..nnnnnnnnnN..',
+        '..mmmmmmmmmM..',
+        '...MmmmmmmM...',
+      ],
+      up: [
+        '....hhhhhh....',
+        '..hhhHHhhhhh..',
+        '.hhhhHiHhhhjh.',
+        '.hhhHhhhHhhjh.',
+        '.hhhhHHHhhhjh.',
+        '.hhhhhhhhhhjh.',
+        '.hhhhhhhhhhjh.',
+        '.hhhhhhhhhjjj.',
+        '.lhhhhhhhhjjl.',
+        '..hhhhhhhhjj..',
+        '...hhhhhhhj...',
+        '....SSSSSS....',
+      ],
+      left: [
+        '....hhhhhh....',
+        '..hhHHhhhhhHh.',
+        '.hHHhhhhhhhiHh',
+        '.hHhhhhhhhhhhj',
+        '.hhhhhhhhhhjjj',
+        '.hvhhhhhhhhjj.',
+        '.vvvvvvhhhhj..',
+        'vvxvvvShhhhj..',
+        'mmmmmMlShhj...',
+        'nnnnnNlShhj...',
+        '.mmmmMSShj....',
+        '..MmmM........',
+      ],
+    },
+    grey: {
+      down: [
+        '.....hhhh.....',
+        '...hhHHhhhh...',
+        '..hHhhhhhhhj..',
+        '.hHhhhhhhhhjj.',
+        '.hhssssssssjh.',
+        '.hsSSSSSSSSSj.',
+        '.hvgggvvgggvj.',
+        '.svvxvvvvxvvS.',
+        '.lmmmmmmmmmMl.',
+        '..nnnnnnnnnN..',
+        '..mmmmmmmmmM..',
+        '...MmmmmmmM...',
+      ],
+      up: [
+        '.....hhhh.....',
+        '...hhHHhhhh...',
+        '..hHhhhhhhhj..',
+        '.hHhhhhhhhhjj.',
+        '.hhhhhhhhhhhj.',
+        '.hhhhhhhhhhhj.',
+        '.hhhhhhhhhhjj.',
+        '.shhhhhhhhhjS.',
+        '.lhhhhhhhhjjl.',
+        '..hhhhhhhjjj..',
+        '...SSSSSSSS...',
+        '....SSSSSS....',
+      ],
+      left: [
+        '.....hhhhh....',
+        '...hhHHhhhhh..',
+        '..hHhhhhhhhhj.',
+        '..sshhhhhhhhjj',
+        '.ssssShhhhhhhj',
+        '.SSSSShhhhhhj.',
+        '.vgggvhhhhhhj.',
+        'vvxvvvSshhhjj.',
+        'mmmmmMlShhhj..',
+        'nnnnnNlShhj...',
+        '.mmmmMSShj....',
+        '..MmmM........',
+      ],
+    },
+  };
+  // front legs (12 + 2 shoe rows, 24 wide): stand, left foot lifted, right foot lifted
+  function staffLegsD() {
+    const row = (l, r) => '........' + l + r + '........';
+    const hip = '.......pppppppPPP.......';
+    const both = (n) => Array(n).fill(row('pppP', 'ppPP'));
+    const shoes = ['.......qqqqQqqqQQ.......', '.......QQQQQQQQQQ.......'];
+    const stand = [hip].concat(both(11), shoes);
+    const lift = (side) => {
+      const rows = [hip].concat(both(9));
+      // the lifted leg ends 2px higher; its shoe is raised and seen a little from above
+      const L = side === 0;
+      rows.push(L ? '.......qqqqQppPP........' : '........pppPqqqQQ.......');
+      rows.push(L ? '.......QQQQQppPP........' : '........pppPQQQQQ.......');
+      rows.push(L ? '............ppPP........' : '........pppP............');
+      rows.push(L ? '............qqqQQ.......' : '.......qqqqQ............');
+      rows.push(L ? '............QQQQQ.......' : '.......QQQQQ............');
+      return rows;
+    };
+    return [stand, lift(0), lift(1)];
+  }
+  const STAFF_LEGS_D = staffLegsD();
+  const STAFF_LEGS_L = sideLegs({ n: 12, W: SW, hip: 10, w: 4, fw: 3, fo: 1, e: 'P', s: 4, shoe: 6, lb: 3, lf: 2, ln: 2 });
+
+  function staffHat(px, bx, by, T) {
+    // a paper cone 7 rows tall, base centred on bx, sitting on row by; diagonal stripes; a crinkled
+    // paper pom on the tip
+    const h = 6;
+    for (let r = 0; r <= h; r++) {
+      const wdt = r + 1, sh = Math.round((T.tilt * (h - r)) / h);
+      const x0 = bx - Math.floor(wdt / 2) + sh;
+      for (let i = 0; i < wdt; i++) {
+        const x = x0 + i, y = by - h + r;
+        let c = ((x + r * 2 + 64) >> 1) & 1 ? T.hatA : T.hatB;
+        if (i === wdt - 1 && wdt > 2) c = G.darken(c, 0.28);
+        else if (i === 0 && wdt > 2) c = G.lighten(c, 0.12);
+        if (r === h) c = G.darken(c, i === wdt - 1 ? 0.4 : 0.18);
+        px.set(x, y, c);
+      }
+    }
+    const tx = bx + T.tilt;
+    px.set(tx, by - h - 1, T.pom); px.set(tx - 1, by - h - 2, T.pom); px.set(tx + 1, by - h - 2, G.darken(T.pom, 0.2));
+    px.set(tx, by - h - 2, G.lighten(T.pom, 0.3));
+  }
+
+  // torso pixels for one outfit, view and frame (y0 = shoulder row)
+  function staffTorso(px, T, dir, y0) {
+    const P = T.pal;
+    if (dir === 'left') {
+      // side: body columns 8-15, chest to the left
+      for (let r = 0; r < 16; r++) {
+        const x0 = r === 0 ? 9 : 8, x1 = r === 0 ? 14 : 15;
+        for (let x = x0; x <= x1; x++) px.set(x, y0 + r, x >= 14 ? P.C : x === x0 ? P.k : P.c);
+      }
+      T.side(px, P, y0);
+      return;
+    }
+    for (let r = 0; r < 16; r++) {
+      const x0 = r === 0 ? 8 : 7, x1 = r === 0 ? 15 : 16;
+      for (let x = x0; x <= x1; x++) px.set(x, y0 + r, x === x0 ? P.k : x >= x1 - 1 ? P.C : P.c);
+    }
+    if (dir === 'down') T.front(px, P, y0); else T.back(px, P, y0);
+  }
+  // arms. front/back: 2px columns outside the body, sleeves to the wrist, long grey-pale hands
+  // reaching the thigh; sw shifts a hand 1px (-1 swung away, +1 toward the viewer)
+  function staffArmsD(px, T, y0, swL, swR) {
+    const P = T.pal;
+    for (const [x, sw, lit] of [[5, swL, true], [17, swR, false]]) {
+      const end = y0 + 13 + sw;
+      for (let y = y0 + 1; y <= end; y++) { px.set(x, y, lit ? P.k : P.c); px.set(x + 1, y, lit ? P.c : P.C); }
+      if (T.cuff) { px.set(x, end, P.K); px.set(x + 1, end, P.K); }
+      for (let y = end + 1; y <= end + 3; y++) { px.set(x, y, P.s); px.set(x + 1, y, P.S); }
+      px.set(lit ? x : x + 1, end + 3, P.S);
+    }
+  }
+  // side arm: from the shoulder (11, y0+1), hand dx px forward (-) or back (+)
+  function staffArmL(px, T, y0, dx) {
+    const P = T.pal;
+    const len = dx ? 12 : 13;
+    let last = [11, y0 + 1];
+    for (let i = 0; i <= len; i++) {
+      const t = i / len, x = Math.round(11 + dx * t * t * 0.9 + dx * t * 0.1), y = y0 + 1 + i;
+      px.set(x, y, P.k); px.set(x + 1, y, P.C);
+      last = [x, y];
+    }
+    if (T.cuff) { px.set(last[0], last[1], P.K); px.set(last[0] + 1, last[1], P.K); }
+    const [hx, hy] = last;
+    px.set(hx, hy + 1, P.s); px.set(hx + 1, hy + 1, P.S);
+    px.set(hx, hy + 2, P.s); px.set(hx + 1, hy + 2, P.S);
+    px.set(hx + (dx > 0 ? 1 : 0), hy + 3, P.S);
+  }
+
+  function staffChar(T) {
+    const P = T.pal, heads = STAFF_HEADS[T.hair];
+    const build = (dir, legs, bob, armA, armB) => {
+      const px = new G.PX(SW, SH);
+      // apron ties and other things behind the body
+      const y0 = S_TOP + bob;
+      px.stamp(legs, P, 0, S_HIP);
+      if (dir === 'left') {
+        staffTorso(px, T, dir, y0);
+        if (T.after) T.after(px, P, y0, dir);
+        // neck
+        px.rect(10, y0 - 2, 3, 2, P.S); px.set(10, y0 - 2, P.s);
+        px.stamp(heads.left, P, 5, S_HEAD + bob);
+        staffArmL(px, T, y0, armA);
+        staffHat(px, 11 + (T.hatSide || 0), S_HEAD + bob + 1, T);
+      } else {
+        staffTorso(px, T, dir, y0);
+        if (T.after) T.after(px, P, y0, dir);
+        px.rect(10, y0 - 2, 4, 2, P.S); px.set(10, y0 - 2, P.s);
+        px.stamp(heads[dir], P, 5, S_HEAD + bob);
+        staffArmsD(px, T, y0, armA, armB);
+        staffHat(px, 12 + (T.hatD || 0), S_HEAD + bob + 1, T);
+      }
+      px.outline();
+      return G.frame(px, SCX, 54);
+    };
+    const L = STAFF_LEGS_D;
+    return {
+      down: [build('down', L[0], 0, 0, 0), build('down', L[1], 1, -1, 1), build('down', L[2], 1, 1, -1)],
+      up: [build('up', L[0], 0, 0, 0), build('up', L[2], 1, -1, 1), build('up', L[1], 1, 1, -1)],
+      left: [
+        build('left', STAFF_LEGS_L[0], 0, 0),
+        build('left', STAFF_LEGS_L[1], 1, 4),
+        build('left', STAFF_LEGS_L[2], 0, 0),
+        build('left', STAFF_LEGS_L[3], 1, -4),
+        build('left', STAFF_LEGS_L[4], 0, 0),
+      ],
+    };
+  }
+  const MASK_PAL = { m: '#eef1f2', M: '#b2bac0', n: '#cdd4d8', l: '#c8ccd0', v: '#241c22', x: '#4c4046' };
+
+  // staff1: cardigan (open) over teal scrubs, a lanyard with an ID card; white clogs
+  const STAFF1 = {
+    hair: 'short', tilt: 1, hatD: 0, hatSide: 0,
+    hatA: C('#c87e94'), hatB: C('#ece2cc'), pom: C('#e2c45e'),
+    pal: G.pal(Object.assign({}, MASK_PAL, {
+      h: '#28222e', H: '#3e3648', i: '#544a60', j: '#18141c', s: '#e2b898', S: '#b88a6c',
+      c: '#6a5848', k: '#86705a', C: '#4e4036', K: '#382e28',
+      a: '#5e8e8a', A: '#446c6a', L: '#7aaaa4', y: '#34446e', w: '#e8e6de', b: '#8aa0b8',
+      p: '#4a6e6c', P: '#344e4e', q: '#dcd8d0', Q: '#9a968e',
+    })),
+    front(px, P, y0) {
+      for (let r = 0; r < 16; r++) for (let x = 10; x <= 13; x++) px.set(x, y0 + r, x === 13 ? P.A : x === 10 ? P.L : P.a);
+      // V neck
+      px.set(11, y0, P.S); px.set(12, y0, P.S); px.set(11, y0 + 1, P.s); px.set(12, y0 + 1, P.S); px.set(11, y0 + 2, P.S);
+      // cardigan edges fall straight down beside the scrubs, pockets low
+      for (let r = 1; r < 16; r++) { px.set(9, y0 + r, P.k); px.set(14, y0 + r, P.C); }
+      px.hline(7, 8, y0 + 11, P.K); px.hline(15, 16, y0 + 11, P.K);
+      for (let x = 7; x <= 16; x++) px.set(x, y0 + 15, x >= 10 && x <= 13 ? P.A : P.K);
+      // lanyard and ID card
+      px.set(10, y0 + 1, P.y); px.set(13, y0 + 1, P.y); px.set(10, y0 + 2, P.y); px.set(13, y0 + 2, P.y);
+      px.set(11, y0 + 3, P.y); px.set(12, y0 + 3, P.y);
+      px.rect(11, y0 + 4, 2, 3, P.w); px.set(11, y0 + 5, P.b); px.set(12, y0 + 6, P.Q);
+    },
+    back(px, P, y0) {
+      px.hline(10, 13, y0, P.a); px.set(13, y0, P.A);
+      for (let r = 2; r < 15; r++) px.set(12, y0 + r, P.C);
+      for (let x = 7; x <= 16; x++) px.set(x, y0 + 15, P.K);
+      px.set(10, y0, P.y); px.set(13, y0, P.y);
+    },
+    side(px, P, y0) {
+      // scrubs at the open front, lanyard card hanging forward
+      for (let r = 1; r < 16; r++) { px.set(8, y0 + r, P.a); px.set(9, y0 + r, P.k); }
+      px.set(9, y0, P.S); px.set(9, y0 + 1, P.y); px.set(8, y0 + 2, P.y);
+      px.rect(7, y0 + 3, 2, 3, P.w); px.set(7, y0 + 4, P.b);
+      for (let x = 8; x <= 15; x++) px.set(x, y0 + 15, x === 8 ? P.A : P.K);
+    },
+  };
+  // staff2: rose scrubs under a long white apron (straps, a pocket, a bow at the back); hair in a bun
+  const STAFF2 = {
+    hair: 'bun', tilt: -1, hatD: 0, hatSide: 0,
+    hatA: C('#d8bc5a'), hatB: C('#5c9692'), pom: C('#d07070'),
+    pal: G.pal(Object.assign({}, MASK_PAL, {
+      h: '#4a3428', H: '#6a4a36', i: '#8a6446', j: '#30221a', s: '#f0c8a8', S: '#c89a7e',
+      c: '#a87482', k: '#c08e9a', C: '#845864', K: '#5e3e48',
+      w: '#ebe7dc', W: '#bdb6a6', V: '#9a9384',
+      p: '#9a6c7a', P: '#74505c', q: '#e8e6e0', Q: '#a29e96',
+    })),
+    front(px, P, y0) {
+      // bib and straps
+      for (let r = 0; r < 3; r++) { px.set(9, y0 + r, P.w); px.set(14, y0 + r, P.W); }
+      px.set(11, y0, P.S); px.set(12, y0, P.S);
+      for (let r = 3; r < 16; r++) for (let x = 8; x <= 15; x++) px.set(x, y0 + r, x === 15 ? P.W : x === 8 ? P.W : P.w);
+      px.hline(9, 14, y0 + 3, P.w);
+      px.hline(8, 15, y0 + 8, P.W);
+      px.rect(10, y0 + 10, 4, 1, P.V); px.set(10, y0 + 11, P.V); px.set(13, y0 + 11, P.V);
+    },
+    back(px, P, y0) {
+      // straps crossing, the bow at the waist
+      for (let r = 0; r < 8; r++) { px.set(8 + Math.round(r * 0.9), y0 + r, P.w); px.set(15 - Math.round(r * 0.9), y0 + r, P.W); }
+      px.hline(7, 16, y0 + 8, P.w); px.set(16, y0 + 8, P.W);
+      px.set(10, y0 + 7, P.w); px.set(13, y0 + 7, P.w); px.set(11, y0 + 8, P.W); px.set(12, y0 + 8, P.W);
+      px.set(10, y0 + 9, P.w); px.set(13, y0 + 9, P.W); px.set(11, y0 + 10, P.w); px.set(12, y0 + 11, P.W);
+    },
+    side(px, P, y0) {
+      // apron front stands a little proud of the body; the bow sticks out at the back
+      px.set(9, y0, P.w); px.set(9, y0 + 1, P.w); px.set(9, y0 + 2, P.w);
+      for (let r = 3; r < 16; r++) { px.set(7, y0 + r, P.w); px.set(8, y0 + r, P.w); px.set(9, y0 + r, P.W); }
+      px.hline(9, 15, y0 + 8, P.w);
+      px.set(16, y0 + 7, P.w); px.set(16, y0 + 9, P.W); px.set(17, y0 + 8, P.W);
+    },
+    after(px, P, y0, dir) {
+      // the apron skirt hangs over the thighs
+      if (dir === 'down') for (let r = 16; r < 20; r++) for (let x = 8; x <= 15; x++) px.set(x, y0 + r, r === 19 || x === 15 ? P.W : P.w);
+      if (dir === 'left') for (let r = 16; r < 20; r++) for (let x = 7; x <= 9; x++) px.set(x, y0 + r, r === 19 ? P.W : P.w);
+    },
+  };
+  // staff3: older man, grey hair, glasses, olive sweater with a pale knit band and ribbed cuffs
+  const STAFF3 = {
+    hair: 'grey', tilt: 0, hatD: 0, hatSide: 1, cuff: true,
+    hatA: C('#9484b8'), hatB: C('#e6e2ea'), pom: C('#dcdce4'),
+    pal: G.pal(Object.assign({}, MASK_PAL, {
+      h: '#8a8890', H: '#aeacb4', i: '#c8c6ce', j: '#5e5c66', s: '#dcb090', S: '#b08466', g: '#a8b4bc',
+      c: '#76703e', k: '#928a50', C: '#585230', K: '#3e3a22', w: '#d8d0b4',
+      p: '#5a4a3e', P: '#3e322a', q: '#3e3028', Q: '#221a16',
+    })),
+    front(px, P, y0) {
+      // shirt collar points in the crew neck
+      px.hline(10, 13, y0, P.C); px.set(10, y0, P.w); px.set(13, y0, P.w); px.set(11, y0, P.S); px.set(12, y0, P.S);
+      // knit band across the chest
+      for (let x = 7; x <= 16; x++) { px.set(x, y0 + 4, (x & 1) ? P.w : P.C); px.set(x, y0 + 5, P.K); px.set(x, y0 + 3, P.K); }
+      // ribbed hem
+      for (let x = 7; x <= 16; x++) { px.set(x, y0 + 14, (x & 1) ? P.c : P.C); px.set(x, y0 + 15, (x & 1) ? P.C : P.K); }
+    },
+    back(px, P, y0) {
+      px.hline(10, 13, y0, P.C);
+      for (let x = 7; x <= 16; x++) { px.set(x, y0 + 4, (x & 1) ? P.w : P.C); px.set(x, y0 + 5, P.K); px.set(x, y0 + 3, P.K); }
+      for (let x = 7; x <= 16; x++) { px.set(x, y0 + 14, (x & 1) ? P.c : P.C); px.set(x, y0 + 15, (x & 1) ? P.C : P.K); }
+    },
+    side(px, P, y0) {
+      px.set(9, y0, P.w); px.set(10, y0, P.C);
+      for (let x = 8; x <= 15; x++) { px.set(x, y0 + 4, (x & 1) ? P.w : P.C); px.set(x, y0 + 5, P.K); px.set(x, y0 + 3, P.K); }
+      for (let x = 8; x <= 15; x++) { px.set(x, y0 + 14, (x & 1) ? P.c : P.C); px.set(x, y0 + 15, (x & 1) ? P.C : P.K); }
+    },
+  };
+  G.defChar('staff1', () => staffChar(STAFF1));
+  G.defChar('staff2', () => staffChar(STAFF2));
+  G.defChar('staff3', () => staffChar(STAFF3));
+  G.STAFF = { STAFF1, STAFF2, STAFF3, staffChar, heads: STAFF_HEADS, hat: staffHat };
+
+  // ======================================================================
+  // CARETAKER_FACE: the finale reveal. Same body as the Caretaker (down, frame 0), head raised,
+  // the mask pulled down under his chin: a young, tired, kind face (Mr. Sato). He holds up his
+  // staff ID card so Haru can read it: SATO.
+  // ======================================================================
+  const F3 = { S: '###|#..|###|..#|###', A: '.#.|#.#|###|#.#|#.#', T: '###|.#.|.#.|.#.|.#.', O: '###|#.#|#.#|#.#|###' };
+  function text3(px, s, x, y, col) {
+    for (const ch of s) { F3[ch].split('|').forEach((r, j) => { for (let i = 0; i < 3; i++) if (r[i] === '#') px.set(x + i, y + j, col); }); x += 4; }
+  }
+  G.defSprite('caretaker_face', () => {
+    const CT = G.CARETAKER, P = CT.PAL;
+    return CT.body('down', 0, (px, cx, hy) => {
+      const y0 = hy + 11;
+      const skin = C('#dcb494'), skinL = C('#ecc8a8'), skinS = C('#b88e72'), skinD = C('#94705a');
+      const hair = C('#1e1a22'), ink = C('#2a1e24'), mouth = C('#a06458');
+      // the face, the cap pushed back; hand-placed 7x6 (columns cx-3..cx+3, rows hy+6..hy+11):
+      // soft brows, tired eyes with shadows under them, a small mouth, the mask pulled down
+      // around his chin with its loops still over the ears
+      CT.raisedHead(px, cx, hy, skin);
+      const FACE = [
+        'sDsssDS',
+        'Lesssed',
+        'sSsSsSS',
+        'Lssssss',
+        'sSmMmSS',
+        'wwwwwwW',
+      ];
+      const FP = { s: skin, L: skinL, S: skinS, D: skinD, e: ink, d: C('#3a2a30'), m: mouth, M: C('#b8786a'), w: P.mask, W: P.maskS };
+      px.stamp(FACE, FP, cx - 3, hy + 6);
+      px.hline(cx - 2, cx + 2, hy + 12, P.maskB); px.set(cx + 2, hy + 12, P.maskS);
+      px.hline(cx - 3, cx + 3, hy + 5, C('#2a2e36'));
+      px.set(cx - 4, hy + 5, hair); px.set(cx + 4, hy + 5, hair); px.set(cx - 4, hy + 6, hair); px.set(cx + 4, hy + 6, C('#16121a'));
+      px.set(cx - 4, hy + 7, skin); px.set(cx + 4, hy + 7, skinS); px.set(cx - 4, hy + 8, skinS); px.set(cx + 4, hy + 8, skinD);
+      px.set(cx - 4, hy + 9, P.loop); px.set(cx + 4, hy + 9, P.maskS); px.set(cx - 4, hy + 10, P.loop); px.set(cx + 4, hy + 10, P.maskD);
+      // he is a person: warm hands and neck, not the grey of the nightmare
+      px.replace(P.skin, C('#d4ac8c')); px.replace(P.skinD, C('#a8826a'));
+      // his right arm comes up to hold the ID card in front of his chest: clear the hanging arm
+      for (let y = y0 + 1; y <= y0 + 26; y++) for (let x = cx - 9; x <= cx - 6; x++) px.set(x, y, 0);
+      px.thick(cx - 6, y0 + 2, cx - 7, y0 + 7, 1.0, P.uniD);
+      // the card: white plastic, a blue band, SATO in black
+      const x0 = cx - 9, yc = y0 + 4;
+      px.rect(x0, yc, 17, 7, C('#eceae4'));
+      px.hline(x0, x0 + 16, yc, C('#4a6a9a')); px.set(x0 + 16, yc, C('#3a5480'));
+      px.vline(x0 + 16, yc + 1, yc + 6, C('#b8b4ac')); px.hline(x0 + 1, x0 + 16, yc + 6, C('#b8b4ac'));
+      text3(px, 'SATO', x0 + 2, yc + 1, C('#24242e'));
+      // the clip and lanyard up to his neck
+      px.set(cx, yc - 1, C('#9a9aa4')); px.set(cx - 1, yc - 2, C('#3a4a7a')); px.set(cx + 1, yc - 2, C('#3a4a7a'));
+      px.set(cx - 1, yc - 3, C('#3a4a7a')); px.set(cx + 1, yc - 3, C('#3a4a7a'));
+      // the hand holding its edge, thumb over the front
+      const hand = C('#d4ac8c'), handD = C('#a8826a');
+      px.rect(x0 - 1, yc + 1, 2, 4, hand); px.set(x0 - 1, yc + 4, handD); px.set(x0 + 1, yc + 2, hand); px.set(x0 + 1, yc + 3, handD);
+    });
+  });
 })(window.G);
