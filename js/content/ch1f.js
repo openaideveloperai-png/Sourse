@@ -281,7 +281,8 @@
     const c = yield* E.ask('@caretaker It\'s late. Back to bed now.', ['Take his hand', 'Run']);
     if (c === 1) { yield* runOut(E); return; }
     yield* E.fadeOut(1.2);
-    yield* E.ending('lights_out');
+    // two or more of the four acts of kindness: a gentler night
+    yield* E.ending(4 - G.trueEnd().length >= 2 ? 'good_night' : 'lights_out');
   }
   function* trueEnding(E, already) {
     if (!already) {
@@ -603,6 +604,9 @@
   G.WALKTHROUGH.finale_leave = [FIN(READ(5)), { use: 'front' }, { use: 'front', choose: [0] }, { expect: { ending: 'nobody_home' } }];
   G.WALKTHROUGH.finale_normal = [
     FIN(READ(2)), { use: 'front' }, { use: 'payphone', choose: [0, 1, 0] }, { expect: { ending: 'lights_out' } },
+  ];
+  G.WALKTHROUGH.finale_good = [
+    FIN(Object.assign({ ota_tea: true, helped_shota: true, shota_bench: true }, READ(4))), { use: 'front' }, { use: 'payphone', choose: [0, 1, 0] }, { expect: { ending: 'good_night' } },
   ];
   G.WALKTHROUGH.finale_wait = [
     FIN(Object.assign({ tama_saved: true, ota_tea: true, helped_shota: true, shota_bench: true }, READ(5))),

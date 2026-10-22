@@ -102,7 +102,19 @@
     ],
     objects: [
       { id: 'futon', x: 2, y: 4, h: 2, sprite: (E) => (E.flag('p_up') ? 'haru_futon_empty' : 'futon'), z: 'floor', solid: false,
-        text: (E) => (E.flag('powerOut') ? ['@haru I could get back in and pull the blanket over my head...', '@haru ...No. I have to find Mom.'] : ['@haru My futon. Still warm.']) },
+        on: function* (E) {
+          if (!E.flag('powerOut')) { yield* E.say('@haru My futon. Still warm.'); return; }
+          if (E.flag('ch1_done')) { yield* E.say('@haru My futon. ...Not now. I have to find Mom.'); return; }
+          // the secret ending: she did say to stay in your room
+          yield* E.say('@haru I could get back in and pull the blanket over my head...', '@haru Mom said: stay in your room tonight. Whatever you hear.');
+          const i = yield* E.ask('@ Get back into the futon?', ['Stay in your room', 'Not yet']);
+          if (i !== 0) { yield* E.say('@haru:determined ...No. I have to find her.'); return; }
+          E.pose('player', 'haru_futon');
+          E.music(null);
+          yield* E.wait(1.2);
+          yield* E.fadeOut(2.0);
+          yield* E.ending('stay');
+        } },
       { id: 'yui_drawing', x: 1, y: 2, z: 'wall', sprite: 'yui_drawing',
         on: function* (E) {
           yield* E.say('@ A crayon drawing: a tall man with a camera, holding a little girl\'s hand. MY PAPA - YUI, 6.');
@@ -777,6 +789,15 @@
   // TEST ROUTE (tools/walkthrough.js ch1)
   // ======================================================================
   G.WALKTHROUGH = G.WALKTHROUGH || {};
+  // the secret ending: answer the phone, then go back to bed
+  G.WALKTHROUGH.ending_stay = [
+    { start: { map: 'home_main', x: 'from_bed', items: ['flashlight'], flags: { p_up: true, p_chime: true, p_lit: true, p_knock: true, p_dontOpen: true, p_gift: true, p_note: true, '@visited:home_main': true, '@visited:home_bed': true } } },
+    { use: 'phone' },
+    { expect: { flags: ['powerOut'] } },
+    { door: 'fusuma' },
+    { use: 'futon', choose: [0] },
+    { expect: { ending: 'stay' } },
+  ];
   G.WALKTHROUGH.ch1 = [
     { expect: { map: 'home_bed' } },
     { walkTo: [3, 5] },

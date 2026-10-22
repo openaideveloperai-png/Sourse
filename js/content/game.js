@@ -40,22 +40,32 @@
   // ---------------- endings ----------------
   G.ENDINGS = Object.assign(G.ENDINGS || {}, {
     okaeri: {
-      title: 'OKAERI', subtitle: 'Ending 1 of 4', color: '#c84050', music: 'badend', retry: true,
+      title: 'OKAERI', subtitle: 'Ending 1 of 6 - bad', color: '#c84050', music: 'badend', retry: true,
       lines: ['Haru opened the door.', 'It wasn\'t Mom.', 'Something very tall bent down until it filled the doorway.', 'It had a ring of keys. It had no face.', '"There you are," it said. "It\'s late."'],
       hint: 'Mom has her own keys.',
     },
     nobody_home: {
-      title: 'NOBODY HOME', subtitle: 'Ending 2 of 4', color: '#8090b0', music: 'badend',
+      title: 'NOBODY HOME', subtitle: 'Ending 2 of 6 - bad', color: '#8090b0', music: 'badend',
       lines: ['Haru let the phone ring.', 'He ran through the doors and into the rain,', 'until the building was gone and the road was empty.', 'They found him at dawn on the river road, in his slippers,', 'asking every car if they had seen his mother.', 'He was very polite about it.'],
       hint: 'Someone was trying to reach you.',
     },
     lights_out: {
-      title: 'LIGHTS OUT', subtitle: 'Ending 3 of 4', color: '#a0a0c0', music: 'sad',
+      title: 'LIGHTS OUT', subtitle: 'Ending 3 of 6 - normal', color: '#a0a0c0', music: 'sad',
       lines: ['The hand was warm. Haru let it lead him.', 'For a moment the corridor had handrails, and every door had a photograph.', 'Then it was 404 again: the futon, the rain, the stopped clock.', '"Good night, Mr. Aoki."', 'Mister? thought Haru. I\'m ten.', 'Tomorrow night, the knocking starts again.'],
       hint: 'Mom wrote you five letters. Someone is still waiting for you.',
     },
+    good_night: {
+      title: 'GOOD NIGHT', subtitle: 'Ending 4 of 6 - good', color: '#a0c8e0', music: 'sad',
+      lines: ['The hand was warm. Haru let it lead him.', 'Down the corridor, Mrs. Ota was asleep with a smile. Somewhere a piano finished its song.', 'Back in 404 the futon was warm, and someone had left the hall light on.', '"Good night, Mr. Aoki."', '"Good night," said Haru. "Tell Mom I waited up."', 'Nobody knocked again that night.'],
+      hint: 'Almost. Did you read everything Mom wrote? Did you leave anyone behind?',
+    },
+    stay: {
+      title: 'STAY IN YOUR ROOM', subtitle: 'Ending 5 of 6 - secret', color: '#d8b8e8', music: 'sad',
+      lines: ['Haru got back into his futon and pulled the blanket over his head, like she said.', 'Stay in your room tonight. Whatever you hear.', 'He heard the rain. He heard keys, once, far away, and a door being checked.', 'Then it was morning. Someone knocked, and a voice he knew said, "Dad? It\'s me."', 'It was the shortest night in years.'],
+      hint: 'Mom told you to stay in your room. Sometimes that is enough. But there is so much more to find out there.',
+    },
     welcome_home: {
-      title: 'WELCOME HOME', subtitle: 'Ending 4 of 4', color: '#f0c890', music: 'ending',
+      title: 'WELCOME HOME', subtitle: 'Ending 6 of 6 - true', color: '#f0c890', music: 'ending',
       lines: ['Morning came to Hinata Hills.', 'The cat slept on the blanket. The rain had stopped.', 'Someone had brought oranges, and a very small cake.', 'He was not cured. It was just a good morning.', 'For everyone who waits up at night.'],
     },
   });
@@ -282,14 +292,14 @@
     let seen = [];
     try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { seen = []; }
     if (!Array.isArray(seen)) seen = [];
-    const ids = ['okaeri', 'nobody_home', 'lights_out', 'welcome_home'];
+    const ids = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home'];
     if (ids.some((k) => seen.includes(k))) {
       ids.forEach((k, i) => {
-        const x0 = W - 52 + i * 11, y0 = H - 30;
+        const x0 = W - 74 + i * 11, y0 = H - 30;
         c.fillStyle = seen.includes(k) ? (G.ENDINGS[k].color || '#fff') : '#2a2434';
         c.fillRect(x0, y0, 8, 8);
       });
-      G.text(c, 'Endings', W - 52, H - 41, { color: '#5a5466', shadow: '#000' });
+      G.text(c, 'Endings', W - 74, H - 41, { color: '#5a5466', shadow: '#000' });
     }
   }
 })(window.G);
