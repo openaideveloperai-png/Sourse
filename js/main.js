@@ -399,6 +399,8 @@
       this.paused = true;
       try {
         for (let f = 0; f < (maxFrames || 60 * 120); f++) {
+          // the game left the exploration scene (an ending went back to the title)
+          if (G.getScene() !== G.EX && !(G.sceneFading && G.sceneFading())) return { idle: true, left: true, frames: f };
           const top = G.UI.stack[G.UI.stack.length - 1];
           if (G.UI.active && top) {
             if (top.gameover) return { gameover: true, frames: f };
