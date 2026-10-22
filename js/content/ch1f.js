@@ -111,7 +111,7 @@
           if (!E.flag('c1f_mirror')) { E.set('c1f_mirror'); yield* E.say('@ For a moment the mirror shows a different room: a whiteboard, a yellow sticky note with numbers.', '@haru The numbers in the mirror look... backwards.'); return; }
           yield* E.say('@ The sticky note again. 2473, back to front. Like mirror writing.');
         } },
-      { id: 'ladder', x: 12, y: 6, sprite: 'stairs_up',
+      { id: 'ladder', x: 12, y: 6, sprite: 'ladder_up',
         on: function* (E) { const ok = yield* E.yesno('@ The ladder up to 202\'s balcony. Climb up?'); if (ok) yield* E.goto('a202', 'from_office', null, 'up', { sfx: 'stairs' }); } },
     ],
     first: function* (E) {
@@ -344,7 +344,7 @@
     objects: [
       { id: 'door_lobby', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'lobby', entry: 'from_stair1', dir: 'down' } },
       { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_1f' },
-      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_2f' },
+      { id: 'sign_up', x: 1, y: 1, w: 2, z: 'wall', sprite: 'sign_up_2f' },
       { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair2', entry: 'from_1f', dir: 'down', walk: true } },
       { id: 'sign_b1', x: 6, y: 1, w: 2, z: 'wall', sprite: 'sign_down_b1' },
       { id: 'b1door', x: 8, y: 1, h: 2, z: 'wall', sprite: 'door_basement', lock: 'basement_key', latch: true,

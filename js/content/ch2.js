@@ -145,7 +145,7 @@
     objects: [
       { id: 'door_c3', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c3', entry: 'from_stair3', dir: 'down' } },
       { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_3f' },
-      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_4f' },
+      { id: 'sign_up', x: 1, y: 1, w: 2, z: 'wall', sprite: 'sign_up_4f' },
       { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair4', entry: 'from_3f', dir: 'down', walk: true } },
       { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_2f' },
       { id: 'barricade', x: 7, y: 3, w: 3, h: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'),

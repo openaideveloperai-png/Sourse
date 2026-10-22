@@ -110,6 +110,23 @@
   // ======================================================================
   // THE STANDING MIRROR (Shota's room) and the reflection Haru glimpses
   // ======================================================================
+  // a steel ladder bolted to the balcony rail, going up into the dark (office -> 202's balcony)
+  G.defSprite('ladder_up', () => {
+    const px = new G.PX(16, 40);
+    const rail = C('#8a9098'), railD = C('#4a5058'), rung = C('#a8b0b8');
+    for (let y = 0; y < 40; y++) {
+      const k = Math.max(0, 1 - y / 26);
+      px.set(3, y, G.mix(rail, C('#0a0a10'), k)); px.set(4, y, G.mix(railD, C('#0a0a10'), k));
+      px.set(11, y, G.mix(rail, C('#0a0a10'), k)); px.set(12, y, G.mix(railD, C('#0a0a10'), k));
+    }
+    for (let y = 37; y > 0; y -= 5) {
+      const k = Math.max(0, 1 - y / 26);
+      px.hline(5, 10, y, G.mix(rung, C('#0a0a10'), k)); px.hline(5, 10, y + 1, G.mix(railD, C('#0a0a10'), k));
+    }
+    // bolts where it meets the rail
+    px.set(3, 36, C('#c8ccd0')); px.set(11, 36, C('#c8ccd0'));
+    return G.frame(px, 8, 40);
+  });
   G.defSprite('mirror_stand', () => {
     const px = new G.PX(16, 32);
     const wood = C('#7a5034'), woodL = C('#9a6a44'), woodD = C('#553420');

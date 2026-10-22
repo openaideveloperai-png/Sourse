@@ -130,7 +130,7 @@
     objects: [
       { id: 'door_c2', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c2', entry: 'from_stair2', dir: 'down' } },
       { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_2f' },
-      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_3f' },
+      { id: 'sign_up', x: 1, y: 1, w: 2, z: 'wall', sprite: 'sign_up_3f' },
       { id: 'up_block', x: 1, y: 3, w: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'), text: ['@ Chair legs. Table legs. The whole pile from upstairs, jammed into the stairs going up.'] },
       { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, cond: (E) => !!E.flag('stairsOpen'), door: { to: 'stair3', entry: 'from_2f', dir: 'down', walk: true } },
       { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_1f' },

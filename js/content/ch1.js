@@ -498,7 +498,7 @@
       { id: 'door_c4', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c4', entry: 'from_stair4', dir: 'down' } },
       { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_4f' },
       { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', text: ['@ The stairs up to the roof. The roof door is chained shut.', "@haru Good. I don't want to go up. I want to go DOWN."] },
-      { id: 'sign_up', x: 1, y: 2, z: 'wall', sprite: 'sign_up_roof', w: 2 },
+      { id: 'sign_up', x: 1, y: 1, z: 'wall', sprite: 'sign_up_roof', w: 2 },
       { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_3f' },
       { id: 'down', x: 7, y: 3, w: 2, h: 2, sprite: 'stairs_down2', z: 'floor', touch: true, solid: false, stairs: true, door: { to: 'stair3', entry: 'from_4f', dir: 'down', walk: true } },
       { id: 'cupboard', x: 1, y: 6, sprite: 'wardrobe', hide: true, hidePrompt: '@ A cleaning cupboard. Mops and buckets... and just enough room. Hide inside?', hideSprite: 'wardrobe_open' },

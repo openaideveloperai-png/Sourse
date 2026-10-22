@@ -10,7 +10,8 @@ Someone knocks with her voice. Then the front door opens by itself, and the buil
 wrong: a lift that was never built, neighbours lost in their own nights, and a very tall man in
 a cap and a white mask who walks the corridors with a ring of keys, putting everyone back to bed.
 
-About 1 to 1.5 hours. Four endings.
+About 1 to 1.5 hours. Six endings: two bad, a normal one, a good one, a secret one and the
+true ending. The endings you have seen are marked on the title screen.
 
 ## Play
 
@@ -44,5 +45,5 @@ On phones and tablets an on-screen d-pad and buttons appear.
 - `docs/MANIFEST.md`, `docs/ART_LIST.md`: map ownership, ids and sprite names.
 - `node tools/walkthrough.js main` plays the whole game from New Game to the true ending and
   fails on any softlock (routes: `ch1`, `ch2`, `ch3`, `ch1f`, `ch4`, `finale_true`,
-  `finale_leave`, `finale_normal`, `finale_wait`). Chases are checked by a bot that walks them.
+  `finale_leave`, `finale_normal`, `finale_good`, `finale_wait`, `ending_stay`). Chases are checked by a bot that walks them.
 - `tools/preview.html?walk=1` shows every character's walk cycle as a filmstrip.
