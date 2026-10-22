@@ -127,37 +127,37 @@
   ];
   const LEGS_L_A = [
     '......pppp......',
-    '.....ppp.PP.....',
+    '.....pppPP......',
+    '.....ppP.PP.....',
     '....ppP...PP....',
-    '....ppP...PP....',
-    '..qqqqQ..QqQ....',
-    '..QQQQQ..QQQ....',
+    '...qqqQ...QQ....',
+    '...QQQQ...QQQ...',
   ];
   const LEGS_L_B = [
     '......pppp......',
-    '.....PP.ppp.....',
+    '.....PPppp......',
+    '.....PP.ppP.....',
     '....PP...ppP....',
-    '....PP...ppP....',
-    '..QqQQ..qqqqQ...',
-    '..QQQQ..QQQQQ...',
+    '...QQQ...qqqQ...',
+    '...QQQQ..QQQQ...',
   ];
   // passing poses (between steps): A = near leg planted, far foot lifting behind;
   // B = far leg planted, near foot swinging through under the body
   const LEGS_L_PA = [
     '......pppp......',
     '......pppP......',
+    '......pppP......',
     '......pppPP.....',
-    '......pppPPQ....',
-    '.....qqqqQ.QQ...',
+    '.....qqqqQQ.....',
     '.....QQQQQ......',
   ];
   const LEGS_L_PB = [
     '......pppp......',
-    '......pPPP......',
-    '......pPPP......',
-    '.....qqpPP......',
-    '....qqqQPP......',
-    '.......QQQQQ....',
+    '......pppP......',
+    '......pppP......',
+    '.....qqqqP......',
+    '.....QQQQPP.....',
+    '........QQQ.....',
   ];
   const TORSO_L_A = [
     '.....jjjjjjJ....',

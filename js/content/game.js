@@ -1,6 +1,6 @@
 // NOBODY HOME: shared game setup used by every chapter.
 // Speakers, deaths, endings, the title screen, the hint phone, save nightlights and small helpers.
-// Chapter files (js/content/prologue.js, ch1.js ... finale.js) add maps, items and hints.
+// Chapter files (js/content/ch1.js, ch2.js, ch3.js, ch1f.js, ch4.js) add maps, items and hints.
 (function (G) {
   'use strict';
   const TS = G.TS;
@@ -24,46 +24,53 @@
     tama: { name: 'Tama', color: '#a8a8b8', blip: 900, blipWave: 'sine' },
   });
 
+  G.SPEAKERS.sato = G.SPEAKERS.nurse;
+
   // ---------------- game over texts (cause -> text) ----------------
+  G.GAMEOVER_TITLE = 'BACK TO BED';
   G.DEATHS = Object.assign(G.DEATHS || {}, {
-    caretaker: 'A hand on your shoulder. "It\'s late. Back to bed now."',
+    caretaker: 'A warm hand on your shoulder. "There you are. Back to bed now."',
     okaeri: 'You opened the door.',
-    guests: 'The party goes on without you.',
-    hands: 'The laundry chute took you down.',
-    steam: 'The steam burns.',
+    chute: 'A long grey sleeve came up the chute. "There you are, Aoki-san."',
+    guests: 'They sang to him until the candles went out.',
+    steam: 'The steam pushes you back, hot and white.',
+    walkby: 'He was right there in the corridor. "Mr. Aoki? It\'s late."',
   });
 
   // ---------------- endings ----------------
   G.ENDINGS = Object.assign(G.ENDINGS || {}, {
     okaeri: {
-      title: 'OKAERI', subtitle: 'Ending 1 of 4', color: '#c84050', music: 'badend',
-      lines: ['You opened the door for the voice.', 'Something in the dark said "Welcome home."', 'It was not your mother.'],
-      hint: 'Mom said: do not open the door for anyone.',
+      title: 'OKAERI', subtitle: 'Ending 1 of 4', color: '#c84050', music: 'badend', retry: true,
+      lines: ['Haru opened the door.', 'It wasn\'t Mom.', 'Something very tall bent down until it filled the doorway.', 'It had a ring of keys. It had no face.', '"There you are," it said. "It\'s late."'],
+      hint: 'Mom has her own keys.',
     },
     nobody_home: {
       title: 'NOBODY HOME', subtitle: 'Ending 2 of 4', color: '#8090b0', music: 'badend',
-      lines: ['Haru ran out into the storm and did not stop.', 'The building was gone. The road was empty.', 'They found him at dawn on the river road,', 'asking every car if they had seen his mother.'],
-      hint: 'Some phone calls are worth answering.',
+      lines: ['Haru let the phone ring.', 'He ran through the doors and into the rain,', 'until the building was gone and the road was empty.', 'They found him at dawn on the river road, in his slippers,', 'asking every car if they had seen his mother.', 'He was very polite about it.'],
+      hint: 'Someone was trying to reach you.',
     },
     lights_out: {
       title: 'LIGHTS OUT', subtitle: 'Ending 3 of 4', color: '#a0a0c0', music: 'sad',
-      lines: ['Haru took the Caretaker\'s hand.', 'For a second the room was white and smelled of soap.', 'Then it was 404 again, and the rain, and the dark.', 'Tomorrow night, the knocking starts again.'],
-      hint: 'Read every letter. Help the neighbours. Do not leave the cat behind.',
+      lines: ['The hand was warm. Haru let it lead him.', 'For a moment the corridor had handrails, and every door had a photograph.', 'Then it was 404 again: the futon, the rain, the stopped clock.', '"Good night, Mr. Aoki."', 'Mister? thought Haru. I\'m ten.', 'Tomorrow night, the knocking starts again.'],
+      hint: 'Mom wrote you five letters. Someone is still waiting for you.',
     },
     welcome_home: {
       title: 'WELCOME HOME', subtitle: 'Ending 4 of 4', color: '#f0c890', music: 'ending',
-      lines: ['Morning came to Hinata Hills.', 'The cat slept on the blanket. The rain had stopped.', 'Someone had brought oranges.', 'Thank you for playing.'],
+      lines: ['Morning came to Hinata Hills.', 'The cat slept on the blanket. The rain had stopped.', 'Someone had brought oranges, and a very small cake.', 'He was not cured. It was just a good morning.', 'For everyone who waits up at night.'],
     },
   });
 
   // ---------------- true ending conditions ----------------
+  // all four are optional acts of attention; none can be missed for good
   G.LETTERS_TOTAL = 5;
+  G.NOTES_HEADER = () => 'Letters from Mom: ' + G.EV.api.notesCount('letter_') + '/' + G.LETTERS_TOTAL;
   G.trueEnd = function () {
     const E = G.EV.api;
     const missing = [];
     if (E.notesCount('letter_') < G.LETTERS_TOTAL) missing.push('letters');
-    if (!E.flag('tama_saved')) missing.push('tama');
-    for (const t of ['helped_ota', 'helped_kuroda', 'helped_shota']) if (!E.flag(t)) missing.push(t);
+    if (!E.flag('ota_tea')) missing.push('ota_tea');
+    if (!E.flag('helped_shota')) missing.push('helped_shota');
+    if (!E.flag('tama_saved')) missing.push('tama_saved');
     return missing;
   };
 
@@ -124,6 +131,7 @@
       id: id || 'nightlight', x: x, y: y, z: 'wall', sprite: 'nightlight',
       light: { r: 30, col: '#ffb060', glow: 0.5, dy: -6 },
       on: function* (E) {
+        if (E.chasing()) { yield* E.say('@haru:scared Not now!'); return; }
         if (!E.flag('sawNightlight')) {
           E.set('sawNightlight');
           yield* E.say('@ A little plug-in nightlight, glowing orange.', '@haru Mom put these in every hallway so I wouldn\'t be scared at night.', '@haru ...It still works. That helps.');
@@ -165,7 +173,6 @@
     },
   };
 
-  G.GAMEOVER_TITLE = 'LIGHTS OUT';
 
   // from chapter 3 on, once per session: the tab title changes while the player looks away
   let metaDone = false;
