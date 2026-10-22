@@ -204,18 +204,17 @@
   function aptDoorLeaf(px, num) {
     const rnd = G.rng(+num * 7 + 3);
     const L = PAINT;
-    // leaf x 1..14, y 4..31: gentle top-left light, grime toward the floor
-    vgrad(px, 1, 4, 14, 28, [L[1], L[2], L[2], L[2], L[3]]);
+    // leaf x 1..14, y 4..31: gentle top-left light, a little grime toward the floor
+    vgrad(px, 1, 4, 14, 28, [mix(L[1], L[2], 0.5), L[2], L[2], L[2], mix(L[2], L[3], 0.6)]);
     px.hline(1, 14, 4, L[0]);
     px.vline(1, 5, 31, L[1]);
-    px.vline(2, 5, 30, mix(L[1], L[2], 0.5));
     px.vline(14, 5, 31, L[3]);
     // pressed panel seam (shallow recess around the lower half)
-    px.hline(3, 12, 20, L[3]); px.hline(3, 12, 29, L[1]);
-    px.vline(3, 21, 28, L[3]); px.vline(12, 21, 29, L[1]);
+    px.hline(3, 12, 20, L[3]); px.hline(4, 12, 30, L[1]);
+    px.vline(3, 21, 30, L[3]); px.vline(12, 21, 29, L[1]);
     // hinges on the left
-    for (const hy of [7, 26]) { px.set(1, hy, JAMB[3]); px.set(1, hy + 1, JAMB[4]); px.set(2, hy, L[0]); }
-    // number plate
+    for (const hy of [7, 26]) { px.set(1, hy, JAMB[3]); px.set(1, hy + 1, JAMB[4]); }
+    // number plate and its shadow
     numberPlate(px, 2, 6, String(num));
     px.hline(3, 14, 13, L[3]);
     // peephole
@@ -223,39 +222,34 @@
     px.set(7, 14, CHROME[1]); px.set(8, 14, CHROME[2]);
     px.set(6, 15, CHROME[2]); px.set(9, 15, CHROME[3]);
     px.set(7, 16, CHROME[3]); px.set(8, 16, CHROME[4]);
-    // knob + key cylinder on the right
-    px.set(12, 16, CHROME[2]); px.set(12, 17, VOID2);
-    knob(px, 11, 18);
+    // chain guard: a slide track with the chain hanging in a loop
+    px.hline(11, 13, 15, CHROME[3]); px.set(11, 15, CHROME[1]);
+    px.set(13, 16, CHROME[2]); px.set(12, 17, CHROME[4]); px.set(11, 16, CHROME[2]);
+    // key cylinder + knob on the right
+    px.set(12, 18, CHROME[2]); px.set(12, 19, VOID2);
+    knob(px, 11, 20);
     // mail slot (newspaper flap) inside the panel
-    px.hline(5, 10, 22, STEEL[1]);
-    px.hline(5, 10, 23, VOID);
-    px.hline(5, 10, 24, STEEL[3]);
-    px.set(4, 23, STEEL[2]); px.set(11, 23, STEEL[3]);
-    px.hline(5, 10, 25, L[3]);
+    px.hline(5, 10, 23, STEEL[1]);
+    px.hline(5, 10, 24, VOID);
+    px.hline(5, 10, 25, STEEL[3]);
+    px.set(4, 24, STEEL[2]); px.set(11, 24, STEEL[3]);
     // ventilation louvre near the floor
-    for (const ly of [26, 28]) { px.hline(5, 10, ly, L[4]); px.hline(5, 10, ly + 1, L[1]); }
-    // chain guard: catch plate on the jamb side, the chain hanging loose
-    px.set(13, 10, CHROME[2]); px.set(14, 10, CHROME[3]);
-    chainSag(px, 13, 11, 13, 15, 0, CHROME);
-    px.set(12, 14, CHROME[2]);
-    // wear: rust at the bottom edge and under the slot, scuffs around the knob
-    for (let i = 0; i < 3; i++) dribble(px, 2 + rnd.int(11), 29 + rnd.int(2), 2, RUST);
-    if (rnd() < 0.6) dribble(px, 5 + rnd.int(6), 25, 2 + rnd.int(2), RUST);
-    scratches(px, 9, 17, 5, 4, L[0], 2, rnd);
-    grime(px, 1, 22, 14, 10, L[4], 0.35, 0.62, +num, 3, 2);
+    for (const ly of [27]) { px.hline(5, 10, ly, L[4]); px.hline(5, 10, ly + 1, L[1]); }
+    // wear: rust at the bottom edge, scuffs around the knob
+    dribble(px, 2 + rnd.int(3), 30, 2, RUST);
+    if (rnd() < 0.7) dribble(px, 10 + rnd.int(4), 29, 3, RUST);
+    if (rnd() < 0.5) dribble(px, 5 + rnd.int(6), 26, 1, RUST);
+    scratches(px, 9, 19, 4, 3, L[0], 1, rnd);
+    grime(px, 1, 24, 14, 8, L[4], 0.3, 0.62, +num, 3, 2);
     // door-specific touches
     if (num === '402') {
-      // empty flat: flyers stuffed in the slot
-      px.set(6, 22, PAPER[0]); px.set(7, 22, PAPER[1]); px.set(7, 21, PAPER[0]); px.set(8, 22, C('#e8d878'));
-      px.set(9, 22, C('#c8d8e8')); px.set(6, 23, PAPER[2]); px.set(8, 23, C('#b8a860'));
+      // the empty flat: flyers stuffed in the slot
+      px.set(6, 23, PAPER[0]); px.set(7, 23, PAPER[1]); px.set(7, 22, PAPER[0]); px.set(8, 23, C('#e8d878'));
+      px.set(9, 23, C('#c8d8e8')); px.set(6, 24, PAPER[2]); px.set(8, 24, C('#b8a860')); px.set(8, 22, C('#d8c868'));
     }
     if (num === '403') {
       // a second lock, newer and brighter
-      px.set(11, 21, CHROME[1]); px.set(12, 21, CHROME[2]); px.set(11, 22, CHROME[3]); px.set(12, 22, VOID2);
-    }
-    if (rnd() < 0.5 && num !== '402') {
-      // an old broadcasting-fee sticker above the knob
-      px.set(11, 14 + rnd.int(2), C('#7a98b8')); px.set(12, 14, C('#d8dce0'));
+      px.set(11, 17, CHROME[0]); px.set(12, 17, CHROME[2]);
     }
   }
 
@@ -285,7 +279,7 @@
     px.vline(2, top, 31, leafR[2]);
     px.vline(3, top + 1, 31, leafR[4]);
     px.set(3, top + 14, CHROME[2]); px.set(3, top + 15, CHROME[3]);
-    if (chainOn) { chainSag(px, 14, top + 6, 11, top + 12, 0, CHROME); px.set(11, top + 13, CHROME[3]); }
+    if (chainOn) { px.set(13, top + 8, CHROME[3]); px.set(13, top + 9, C('#5a6066')); px.set(12, top + 10, C('#7a8088')); px.set(13, top + 11, C('#4a4e56')); px.set(13, top + 12, C('#6a7078')); }
   }
   def('door_apt_open', () => {
     const px = new G.PX(16, 32);
@@ -299,7 +293,7 @@
   // plain steel service door: cool grey, lever handle, blank sign plate, louvre
   function serviceLeaf(px, top) {
     const L = STEEL, rnd = G.rng(51);
-    vgrad(px, 1, top, 14, 32 - top, [L[1], L[2], L[2], L[3]]);
+    vgrad(px, 1, top, 14, 32 - top, [mix(L[1], L[2], 0.5), L[2], L[2], mix(L[2], L[3], 0.6)]);
     px.hline(1, 14, top, L[0]);
     px.vline(1, top + 1, 31, L[1]);
     px.vline(14, top + 1, 31, L[3]);
@@ -314,7 +308,7 @@
     for (let i = 0; i < 3; i++) { px.hline(4, 11, top + 19 + i * 2, L[4]); px.hline(4, 11, top + 20 + i * 2, L[1]); }
     // dents and rust at the bottom corners
     dribble(px, 2, 29, 2, RUST); dribble(px, 13, 28, 3, RUST);
-    scratches(px, 3, top + 8, 9, 12, L[0], 4, rnd);
+    scratches(px, 3, top + 8, 9, 10, L[0], 2, rnd);
     grime(px, 1, top + 14, 14, 32 - top - 14, L[4], 0.3, 0.6, 52, 3, 2);
   }
   def('door_steel', () => {
@@ -337,138 +331,155 @@
   });
 
   // ---- stairwell fire door with a wired-glass window and a lit EXIT sign above ----
-  // canvas 16x36: the sign overhangs the ceiling edge by 4px
-  const FIRE = R('#d2ccb8', '#b8b19c', '#9e9782', '#827b68', '#635d4e');
+  // canvas 16x37: wall-local y 0 is canvas y 5, so the sign overhangs the ceiling edge
+  const FIRE = R('#d4cebb', '#bcb5a0', '#a29b86', '#86806c', '#666050');
+  const SIGN = [
+    '..............',
+    '.....w...wwww.',
+    '...wwww..w..w.',
+    '..w..w...w..w.',
+    '.....ww..w..w.',
+    '....w..w.w..w.',
+    '...w.....w..w.',
+    '..............',
+  ];
   function exitSign(px, x, y) {
-    // housing 12x7, lit green panel with the running man heading for a doorway
-    px.rect(x, y, 12, 7, C('#d8dcd8'));
-    px.hline(x, x + 11, y, C('#f4f6f2'));
-    px.hline(x, x + 11, y + 6, C('#9aa09c'));
-    px.vline(x + 11, y + 1, y + 6, C('#aeb4b0'));
-    const g = C('#2fa463'), gD = C('#1f7e4a'), w = C('#effff4');
-    px.rect(x + 1, y + 1, 10, 5, g);
-    px.hline(x + 1, x + 10, y + 5, gD);
-    // doorway: white frame, dark green inside
-    px.vline(x + 7, y + 1, y + 5, w); px.vline(x + 9, y + 1, y + 5, w); px.set(x + 8, y + 1, w);
-    px.vline(x + 8, y + 2, y + 5, gD);
-    // runner
-    px.set(x + 4, y + 1, w);
-    px.set(x + 2, y + 2, w); px.set(x + 3, y + 2, w); px.set(x + 4, y + 2, w); px.set(x + 5, y + 2, w);
-    px.set(x + 3, y + 3, w);
-    px.set(x + 2, y + 4, w); px.set(x + 4, y + 4, w);
-    px.set(x + 1, y + 5, w); px.set(x + 5, y + 5, w);
+    // housing 14x8 (lit green panel 12x6), the runner heading for a doorway
+    const g = C('#2ea862'), gD = C('#1d7a47'), w = C('#f0fff4');
+    px.rect(x, y, 14, 8, C('#d8dcd8'));
+    px.hline(x, x + 13, y, C('#f6f8f4'));
+    px.hline(x + 1, x + 13, y + 7, C('#8e9490'));
+    px.vline(x + 13, y + 1, y + 7, C('#a8aea9'));
+    px.rect(x + 1, y + 1, 12, 6, g);
+    px.vline(x + 11, y + 2, y + 6, gD); px.vline(x + 12, y + 2, y + 6, gD);
+    px.stamp(SIGN, { w: w }, x, y);
+    px.hline(x + 1, x + 9, y + 6, mix(g, gD, 0.5));
   }
   function stairsDoor(chained) {
-    const px = new G.PX(16, 36);
-    const o = 4; // wall-local y 0 is canvas y 4
+    const o = 5; // wall-local y 0 is canvas y 5
+    const px = new G.PX(16, 32 + o);
+    const B = 31 + o; // floor row
     jamb(px, o + 3, R('#8a8678', '#6e6a5e', '#5a564c', '#46433b', '#33302a'));
     const top = o + 5;
     const L = FIRE, rnd = G.rng(61);
-    vgrad(px, 1, top, 14, 36 - top, [L[1], L[2], L[2], L[3]]);
+    vgrad(px, 1, top, 14, B + 1 - top, [mix(L[1], L[2], 0.4), L[2], L[2], mix(L[2], L[3], 0.6)]);
     px.hline(1, 14, top, L[0]);
-    px.vline(1, top + 1, 35, L[1]);
-    px.vline(14, top + 1, 35, L[3]);
-    // wired-glass window: dark stairwell behind, a faint green spill from the exit light below
-    sunk(px, 5, top + 3, 6, 8, L);
-    px.rect(6, top + 4, 4, 6, C('#1a2422'));
-    for (let y = 0; y < 6; y++) for (let x = 0; x < 4; x++) {
-      if ((x + y) % 3 === 0) px.set(6 + x, top + 4 + y, C('#3a4a46'));
-      if (y > 3 && (x + y) % 2) px.set(6 + x, top + 4 + y, C('#1e3a2e'));
+    px.vline(1, top + 1, B, L[1]);
+    px.vline(14, top + 1, B, L[3]);
+    // wired-glass window: dark stairwell behind, green spill from the exit light down there
+    sunk(px, 5, top + 3, 6, 9, L);
+    px.rect(6, top + 4, 4, 7, C('#18221f'));
+    for (let y = 0; y < 7; y++) for (let x = 0; x < 4; x++) {
+      if ((x + y) % 3 === 0) px.set(6 + x, top + 4 + y, C('#34443f'));
+      if (y > 4 && (x + y) % 2) px.set(6 + x, top + 4 + y, C('#1d3a2c'));
     }
-    px.set(6, top + 4, C('#7a8e88')); px.set(7, top + 4, C('#56665f'));
-    // lever + closer arm shadow at the top
-    px.set(12, top + 12, CHROME[3]); px.rect(12, top + 13, 2, 2, CHROME[2]); px.set(12, top + 13, CHROME[1]);
-    px.hline(9, 11, top + 14, CHROME[1]); px.hline(9, 11, top + 15, CHROME[4]);
-    px.hline(9, 13, top + 1, L[4]); px.hline(10, 13, top + 2, L[3]);
+    px.set(6, top + 4, C('#7a8e88')); px.set(7, top + 4, C('#56665f')); px.set(6, top + 5, C('#56665f'));
+    // lever handle
+    px.set(12, top + 13, CHROME[3]); px.rect(12, top + 14, 2, 2, CHROME[2]); px.set(12, top + 14, CHROME[1]);
+    px.hline(9, 11, top + 15, CHROME[1]); px.hline(9, 11, top + 16, CHROME[4]);
+    // door closer arm at the top
+    px.hline(8, 13, top + 1, L[4]); px.hline(9, 12, top + 2, L[3]);
     // kick plate
-    px.rect(2, 31, 12, 4, STEEL[2]); px.hline(2, 13, 31, STEEL[0]); px.hline(2, 13, 34, STEEL[4]);
-    scratches(px, 3, 31, 10, 3, STEEL[0], 3, rnd);
-    grime(px, 1, top + 12, 14, 36 - top - 12, L[4], 0.3, 0.6, 62, 3, 2);
-    dribble(px, 12, 28, 3, RUST);
-    px.hline(0, 15, 35, C('#46433b'));
-    // the sign
-    exitSign(px, 2, 0);
+    px.rect(2, B - 4, 12, 4, STEEL[2]); px.hline(2, 13, B - 4, STEEL[0]); px.hline(2, 13, B - 1, STEEL[4]);
+    px.vline(13, B - 3, B - 1, STEEL[3]);
+    scratches(px, 3, B - 3, 9, 2, STEEL[0], 2, rnd);
+    grime(px, 1, top + 14, 14, B - top - 18, L[4], 0.25, 0.64, 62, 3, 2);
+    dribble(px, 3, B - 7, 3, RUST);
+    px.hline(0, 15, B, C('#46433b'));
+    exitSign(px, 1, 0);
     if (chained) {
-      // chain looped across in an X, padlock where they cross
-      chainSag(px, 1, top + 6, 14, top + 20, 1, CHROME, true);
-      chainSag(px, 14, top + 6, 1, top + 20, 1, CHROME, true);
-      chainSag(px, 0, top + 13, 15, top + 13, 2, CHROME, true);
-      padlock(px, 6, top + 13, true);
+      // chains crossed in an X through the lever, padlock where they meet
+      const CH = R('#c4c8cc', '#9a9fa6', '#767b83', '#55595f', '#383b40');
+      chainSag(px, 1, top + 5, 14, top + 19, 0, CH, true);
+      chainSag(px, 14, top + 5, 1, top + 19, 0, CH, true);
+      padlock(px, 5, top + 11, true);
     }
     px.outline();
-    if (!chained) {
-      // soft green spill under the sign (on top of the outline, translucent)
-      shade(px, 1, 7, 14, 3, C('#3fd080', 0.16));
-    }
-    return fr(px, 8, 36);
+    // the sign glows a little on the wall around it
+    shade(px, 0, 0, 16, 10, C('#3fe08a', 0.14), (i, j) => j > 0 || (i > 0 && i < 15));
+    return fr(px, 8, 32 + o);
   }
   def('door_stairs', () => stairsDoor(false));
   def('door_stairs_chained', () => stairsDoor(true));
 
   // ---- lobby: double glass doors, night and rain beyond (2x2: 32x32, anchor (16, 32)) ----
-  const ALU = R('#d6dadc', '#b4b9bc', '#959a9e', '#767b80', '#55595e');
+  const ALU = R('#d8dcde', '#b6bbbe', '#979ca0', '#787d82', '#565a5f');
+  const inGlass = (x, y) => y >= 7 && y <= 26 && ((x >= 4 && x <= 13) || (x >= 18 && x <= 27));
+  function nightScene(px, k) {
+    // one continuous street scene behind both leaves
+    for (let y = 7; y <= 26; y++)
+      for (let x = 4; x <= 27; x++) {
+        if (!inGlass(x, y)) continue;
+        let c;
+        if (y < 17) c = G.bayer(x, y) < (y - 7) / 10 ? C('#141c2a') : C('#0c111d');
+        else if (y < 21) c = C('#090c13');
+        else c = (x * 5 + y * 3) % 7 < 2 ? C('#172029') : C('#10151c');
+        px.set(x, y, c);
+      }
+    // building blocks on the far side, a few lit windows
+    const sky = [[4, 15], [8, 14], [10, 16], [13, 13], [19, 15], [22, 14], [26, 16]];
+    for (const [x, h] of sky) for (let xx = x; xx < x + 4; xx++) for (let y = h; y < 21; y++) if (inGlass(xx, y)) px.set(xx, y, C('#080a10'));
+    for (const [x, y, c] of [[5, 17, '#a88a50'], [9, 16, '#6e5c3a'], [11, 18, '#8a7448'], [21, 16, '#9a8250'], [23, 18, '#5e5034']]) px.set(x, y, C(c));
+    // sodium street lamp in the right pane with a halo, smeared on the wet road
+    for (let y = 8; y < 14; y++) for (let x = 20; x < 27; x++) {
+      const d = Math.hypot(x - 23, (y - 9.5) * 1.3);
+      if (d < 3.4 && inGlass(x, y)) px.set(x, y, mix(px.get(x, y), C('#d89a50'), d < 1.8 ? 0.35 : 0.16));
+    }
+    px.set(23, 9, C('#ffe2a0')); px.set(22, 9, C('#d8a058')); px.set(24, 9, C('#d8a058'));
+    px.vline(23, 10, 20, C('#1c2028'));
+    for (let y = 21; y < 27; y++) { px.set(23, y, y % 2 ? C('#8a6a3a') : C('#5a4630')); if (y < 24) px.set(22 + (y % 2) * 2, y, C('#3a3226')); }
+    // rain: thin streaks falling slightly to the left, crawling down with k
+    const rnd = G.rng(77);
+    for (let i = 0; i < 18; i++) {
+      const x0 = 4 + rnd.int(26), y0 = rnd.int(20), l = 2 + rnd.int(2);
+      for (let j = 0; j < l; j++) {
+        const t = (y0 + k * 7 + j) % 20, y = 7 + t, x = x0 - (t >> 2);
+        if (inGlass(x, y)) px.set(x, y, mix(px.get(x, y), C('#9ab0c8'), j === l - 1 ? 0.5 : 0.25));
+      }
+    }
+    // reflections: a pale diagonal on each pane
+    for (const bx of [5, 19]) for (let i = 0; i < 9; i++) for (const off of [0, 1]) {
+      const x = bx + i + off, y = 25 - i * 2;
+      for (const yy of [y, y - 1]) if (inGlass(x, yy)) px.set(x, yy, mix(px.get(x, yy), C('#c8d8e8'), off ? 0.1 : 0.18));
+    }
+  }
   function glassDoors(k, chained) {
     const px = new G.PX(32, 32);
-    // outer aluminium frame
+    // frame posts and header
     px.rect(0, 2, 32, 30, ALU[2]);
-    px.hline(0, 31, 2, ALU[0]);
-    px.vline(0, 3, 31, ALU[1]);
-    px.vline(31, 3, 31, ALU[3]);
-    // the night outside: dark blue sky, a far sodium lamp, wet street reflections
-    const panes = [[3, 5, 11, 21], [18, 5, 11, 21]];
-    const night = [C('#0d1220'), C('#111a2a'), C('#16202e'), C('#1a2430'), C('#141c26')];
-    for (const [gx, gy, gw, gh] of panes) {
-      vgrad(px, gx, gy, gw, gh, night);
-      // distant building with two lit windows
-      px.rect(gx, gy + 9, gw, 6, C('#0a0e16'));
-      if (gx < 10) { px.set(gx + 2, gy + 11, C('#a08850')); px.set(gx + 7, gy + 12, C('#6a5a3a')); }
-      else { px.set(gx + 4, gy + 10, C('#8a7a4a')); }
-      // street, wet
-      px.rect(gx, gy + 15, gw, gh - 15, C('#10161e'));
-      for (let x = 0; x < gw; x++) if ((x * 7 + gy) % 5 < 2) px.set(gx + x, gy + 17 + (x % 3), C('#1e2a36'));
+    px.hline(0, 31, 2, ALU[0]); px.hline(0, 31, 3, ALU[1]); px.hline(1, 30, 4, ALU[3]);
+    px.vline(0, 3, 31, ALU[1]); px.vline(1, 4, 31, ALU[3]);
+    px.vline(31, 3, 31, ALU[3]); px.vline(30, 4, 31, ALU[2]);
+    // two leaves x 2..15 / 16..29
+    for (const lx of [2, 16]) {
+      px.rect(lx, 5, 14, 26, ALU[2]);
+      px.hline(lx, lx + 13, 5, ALU[0]);
+      px.vline(lx, 6, 30, ALU[1]); px.vline(lx + 13, 6, 30, ALU[3]);
+      // inner glazing bead
+      px.hline(lx + 2, lx + 11, 6, ALU[4]); px.vline(lx + 1, 6, 27, ALU[2]);
+      // kick rail
+      px.hline(lx + 1, lx + 12, 27, ALU[0]); px.hline(lx + 1, lx + 12, 30, ALU[4]);
+      px.hline(lx + 2, lx + 11, 29, ALU[3]);
     }
-    // sodium street lamp in the right pane, its smeared reflection on the road
-    px.set(25, 8, C('#ffd890')); px.set(24, 8, C('#c89a50')); px.set(26, 8, C('#c89a50')); px.set(25, 9, C('#a87a40'));
-    px.vline(25, 10, 13, C('#1a1e26'));
-    for (let y = 21; y < 25; y++) px.set(25 + (y & 1), y, y < 23 ? C('#8a6a3a') : C('#5a4630'));
-    // rain: diagonal streaks that crawl down with k
-    const rnd = G.rng(77);
-    const drops = [];
-    for (let i = 0; i < 16; i++) drops.push([rnd.int(32), rnd.int(26), 2 + rnd.int(3)]);
-    for (const [dx, dy, l] of drops) {
-      for (let j = 0; j < l; j++) {
-        const y = 5 + ((dy + k * 4 + j) % 21), x = dx + Math.floor((dy + k * 4 + j) / 7);
-        const inPane = (x >= 3 && x < 14) || (x >= 18 && x < 29);
-        if (inPane) px.set(x, y, mix(px.get(x, y), C('#8aa0b8'), j === l - 1 ? 0.55 : 0.3));
-      }
+    nightScene(px, k);
+    px.vline(15, 5, 30, ALU[4]); px.vline(16, 5, 30, ALU[1]);
+    // long pull handles on stand-offs
+    for (const hx of [12, 19]) {
+      px.vline(hx, 10, 22, CHROME[1]); px.vline(hx + (hx < 16 ? 1 : -1), 11, 21, CHROME[3]);
+      px.set(hx, 10, CHROME[0]); px.set(hx, 22, CHROME[3]);
     }
-    // water beads on the glass (static)
-    for (let i = 0; i < 6; i++) { const x = [4, 9, 12, 19, 23, 27][i], y = [7, 14, 19, 12, 17, 22][i]; px.set(x, y, C('#4a5a6c')); }
-    // reflection band across both panes
-    for (let i = 0; i < 26; i++) {
-      for (const off of [0, 1]) {
-        const x = 3 + i + off, y = 25 - i;
-        if (((x >= 3 && x < 14) || (x >= 18 && x < 29)) && y >= 5 && y < 26) px.set(x, y, mix(px.get(x, y), C('#c8d8e8'), off ? 0.12 : 0.2));
-      }
-    }
-    // door stiles, mullions, rails
-    for (const sx of [1, 14, 17, 29]) { px.rect(sx, 3, 2, 29, ALU[2]); px.vline(sx, 3, 31, ALU[1]); px.vline(sx + 1, 3, 31, ALU[3]); }
-    px.vline(16, 3, 31, ALU[4]);
-    px.rect(1, 3, 30, 2, ALU[2]); px.hline(1, 30, 3, ALU[1]); px.hline(1, 30, 4, ALU[3]);
-    px.rect(1, 26, 30, 5, ALU[2]); px.hline(1, 30, 26, ALU[0]); px.hline(1, 30, 30, ALU[4]);
-    px.hline(3, 13, 28, ALU[3]); px.hline(18, 28, 28, ALU[3]);
-    // pull handles near the meeting stiles
-    for (const hx of [12, 19]) { px.vline(hx, 12, 20, CHROME[1]); px.vline(hx + 1, 12, 20, CHROME[3]); px.set(hx, 11, CHROME[3]); px.set(hx, 21, CHROME[3]); }
-    // a tiny brass lock cylinder at the meeting stiles
-    px.set(15, 27, GOLD[1]); px.set(16, 27, GOLD[3]);
-    if (chained) {
-      // heavy chain wrapped through both handles, big padlock hanging
-      for (const y of [13, 16]) chainSag(px, 11, y, 21, y, 2, STEEL, true);
-      chainSag(px, 12, 19, 20, 19, 1, STEEL, true);
-      chainSag(px, 15, 20, 15, 22, 0, STEEL);
-      padlock(px, 13, 22, true);
-    }
+    // lock cylinder in the kick rail
+    px.set(15, 28, GOLD[1]); px.set(16, 28, GOLD[3]);
     px.hline(0, 31, 31, ALU[4]);
+    if (chained) {
+      // heavy chain wound around both handles, big padlock hanging off it
+      const CH = R('#b8bcc2', '#8e939a', '#6c7178', '#4c5056', '#33363b');
+      chainSag(px, 11, 13, 20, 13, 2, CH, true);
+      chainSag(px, 11, 17, 20, 17, 2, CH, true);
+      for (const hx of [11, 20]) { px.set(hx, 14, CH[2]); px.set(hx, 15, CH[4]); px.set(hx, 16, CH[1]); }
+      chainSag(px, 15, 19, 16, 21, 0, CH);
+      padlock(px, 13, 21, true);
+    }
     px.outline();
     return fr(px, 16, 32);
   }
@@ -490,9 +501,8 @@
       if (n > 0.66 + G.bayer(x, y) * 0.12) px.set(x, y, n > 0.86 ? RUST[3] : n > 0.76 ? RUST[2] : RUST[1]);
     }
     // stencilled B1 (stencil bridges cut into the letters)
-    text(px, 'B1', 4, 7, C('#d8d0b0'));
-    px.set(4, 9, L[2]); px.set(9, 9, L[2]);
-    px.set(5, 12, C('#a8a088'));
+    text(px, 'B1', 4, 7, C('#e0d6b0'));
+    px.set(5, 9, C('#a89e80')); px.set(9, 11, C('#a89e80'));
     // rivets around the edge
     for (let y = 6; y < 30; y += 4) { px.set(2, y, L[0]); px.set(13, y, L[0]); px.set(2, y + 1, L[4]); px.set(13, y + 1, L[4]); }
     // heavy lever
@@ -520,10 +530,10 @@
     // floor indicator (dark): B 1 2 3 4 5 and an arrow, all unlit
     px.rect(3, 3, 26, 7, C('#121216'));
     px.hline(3, 28, 3, C('#060608')); px.hline(3, 28, 9, F[1]);
-    text(px, 'B12345', 4, 4, C('#3a3032'));
-    px.set(27, 5, C('#2e2628')); px.hline(26, 28, 6, C('#2e2628'));
-    // a dead bulb glint
-    px.set(8, 4, C('#5a4a48'));
+    text(px, 'B12345', 4, 4, C('#4e4244'));
+    px.set(27, 5, C('#3e3436')); px.hline(26, 28, 6, C('#3e3436'));
+    // a dead bulb glint on the glass
+    px.set(4, 4, C('#6a5c5a'));
     // jambs
     px.rect(2, 11, 28, 21, F[3]);
     px.hline(2, 29, 11, F[4]);
@@ -596,30 +606,559 @@
 
   // inside the car: 1-5 and B, open/close, keyhole (1x1 wall)
   def('lift_buttons', () => {
-    const px = new G.PX(15, 24);
-    bevel(px, 0, 0, 15, 24, CHROME);
-    for (let y = 1; y < 23; y++) for (let x = 1; x < 14; x++) if (G.hash(x, 2, 6) < 0.25) px.set(x, y, mix(px.get(x, y), CHROME[3], 0.3));
-    const lbl = C('#3a3638');
-    const btn = (x, y, s) => {
-      px.rect(x - 1, y - 1, 5, 7, CHROME[3]);
-      px.rect(x, y, 3, 5, C('#ece6d4'));
-      px.hline(x - 1, x + 3, y - 1, CHROME[4]);
-      if (s) text(px, s, x, y, lbl);
-    };
-    const rows = [['1', '2', '3'], ['4', '5', 'B']];
-    rows.forEach((row, j) => row.forEach((s, i) => btn(2 + i * 4, 2 + j * 7, s)));
-    // open <|> and close >|< icons
+    const px = new G.PX(15, 25);
+    bevel(px, 0, 0, 15, 25, CHROME);
+    for (let y = 1; y < 24; y++) for (let x = 1; x < 14; x++) if (G.hash(x, 2, 6) < 0.25) px.set(x, y, mix(px.get(x, y), CHROME[3], 0.3));
+    // the floor buttons: backlit digits in a dark field
+    sunk(px, 1, 1, 13, 15, CHROME, C('#24242a'));
+    const lbl = C('#e8dcc0');
+    [['1', '2', '3'], ['4', '5', 'B']].forEach((row, j) => row.forEach((s, i) => {
+      text(px, s, 2 + i * 4, 3 + j * 7, s === 'B' ? C('#c8a868') : lbl);
+    }));
+    // open <|> and close >|< buttons
     const icon = (x, y, open) => {
-      px.rect(x - 1, y - 1, 5, 7, CHROME[3]); px.rect(x, y, 3, 5, C('#ece6d4')); px.hline(x - 1, x + 3, y - 1, CHROME[4]);
-      px.vline(x + 1, y, y + 4, lbl);
-      if (open) { px.set(x, y + 2, lbl); px.set(x + 2, y + 2, lbl); }
-      else { px.set(x, y + 1, lbl); px.set(x, y + 3, lbl); px.set(x + 2, y + 1, lbl); px.set(x + 2, y + 3, lbl); }
+      px.rect(x, y, 5, 5, C('#e8e2d0')); px.hline(x, x + 4, y + 4, CHROME[3]); px.vline(x + 4, y, y + 4, CHROME[3]);
+      const k = C('#3a3638');
+      px.vline(x + 2, y + 1, y + 3, k);
+      if (open) { px.set(x, y + 2, k); px.set(x + 4, y + 2, k); }
+      else { px.set(x + 1, y + 2, k); px.set(x + 3, y + 2, k); }
     };
-    icon(2, 16, true); icon(6, 16, false);
+    icon(1, 18, true); icon(6, 18, false);
     // keyhole for the service key
-    px.rect(10, 16, 3, 5, CHROME[3]); px.set(11, 17, VOID); px.set(11, 18, VOID); px.set(11, 19, VOID2); px.hline(10, 12, 20, CHROME[1]);
+    px.rect(11, 18, 3, 5, CHROME[3]); px.set(12, 19, VOID); px.set(12, 20, VOID); px.set(12, 21, VOID2); px.hline(11, 13, 22, CHROME[1]);
     px.outline();
     drop(px, 1, 1, SHADOW2);
     return wallF(px, 28);
   });
+
+  // =====================================================================
+  //  APARTMENT WALL PIECES
+  // =====================================================================
+  // translucent paint on empty pixels only (glows and halos, after outline)
+  function halo(px, cx, cy, rx, ry, col, a, test) {
+    for (let j = Math.floor(cy - ry - 1); j <= Math.ceil(cy + ry + 1); j++)
+      for (let i = Math.floor(cx - rx - 1); i <= Math.ceil(cx + rx + 1); i++) {
+        if (!px.in(i, j) || px.get(i, j) >>> 24) continue;
+        if (test && !test(i, j)) continue;
+        const dx = (i + 0.5 - cx) / rx, dy = (j + 0.5 - cy) / ry, d = dx * dx + dy * dy;
+        if (d > 1) continue;
+        px.set(i, j, C(col, a * (1 - d * 0.85)));
+      }
+  }
+  // lerp toward a colour on already drawn pixels within an ellipse (light spill / glints)
+  function spill(px, cx, cy, rx, ry, col, amt) {
+    for (let j = Math.floor(cy - ry - 1); j <= Math.ceil(cy + ry + 1); j++)
+      for (let i = Math.floor(cx - rx - 1); i <= Math.ceil(cx + rx + 1); i++) {
+        const c = px.get(i, j);
+        if (c >>> 24 !== 255) continue;
+        const dx = (i + 0.5 - cx) / rx, dy = (j + 0.5 - cy) / ry, d = dx * dx + dy * dy;
+        if (d > 1) continue;
+        const t = amt * (1 - d) + (G.bayer(i, j) - 0.5) * 0.12;
+        if (t > 0.02) px.set(i, j, mix(c, col, Math.min(1, t)));
+      }
+  }
+  // narrow digit '1' so "1958" fits a 16px sheet
+  function textN(px, s, x, y, col) {
+    for (const ch of String(s)) {
+      if (ch === '1') { px.set(x, y + 1, col); px.vline(x + 1, y, y + 4, col); x += 3; continue; }
+      text(px, ch, x, y, col); x += 4;
+    }
+  }
+
+  // ---- fusuma / oshiire (2x2 wall: 32x32, anchor (16, 32)) ----
+  const FPAPER = R('#ece2c4', '#ddd2b0', '#cabd98', '#ae9f7c', '#8a7d60');
+  const HINOKI = R('#d2b486', '#b8966a', '#9a7a52', '#7a5e3e', '#58422c');
+  // the wooden surround: lintel (kamoi), posts and the sill (shikii)
+  function fusumaFrame(px) {
+    px.rect(0, 0, 32, 32, HINOKI[2]);
+    px.hline(0, 31, 0, HINOKI[0]); px.hline(0, 31, 1, HINOKI[1]); px.hline(2, 29, 2, HINOKI[4]);
+    px.vline(0, 1, 31, HINOKI[1]); px.vline(1, 2, 31, HINOKI[3]);
+    px.vline(30, 2, 31, HINOKI[1]); px.vline(31, 1, 31, HINOKI[3]);
+    // wood grain on the lintel
+    for (const x of [5, 12, 21, 26]) px.set(x, 1, HINOKI[2]);
+    px.hline(0, 31, 31, HINOKI[3]);
+  }
+  // one paper leaf, lacquered edge, x0 .. x0+w-1, y 3..30
+  function fusumaLeaf(px, x0, w, pullX, seed) {
+    const top = 3, bot = 30;
+    // paper, lighter at the top, a faint ink-wash range of hills across the lower third
+    vgrad(px, x0 + 1, top + 1, w - 2, bot - top - 1, [FPAPER[0], FPAPER[1], FPAPER[1], FPAPER[2]]);
+    for (let x = x0 + 1; x < x0 + w - 1; x++) {
+      const ridge = 21 + Math.round(Math.sin(x * 0.42) * 1.6 + Math.sin(x * 0.17 + 1) * 2.2);
+      for (let y = ridge; y < bot; y++) {
+        const t = (y - ridge) / 6;
+        if (t > G.bayer(x, y) * 0.9) px.set(x, y, y === ridge ? FPAPER[3] : mix(FPAPER[2], FPAPER[3], Math.min(1, t * 0.5)));
+      }
+      const far = 17 + Math.round(Math.sin(x * 0.3 + 2.3) * 1.5);
+      if (far < ridge - 1) { px.set(x, far, mix(FPAPER[1], FPAPER[2], 0.7)); }
+    }
+    // karakami motif: little cloud marks on a staggered grid
+    for (let y = top + 3; y < 17; y += 5)
+      for (let x = x0 + 2 + ((y / 5) & 1) * 3; x < x0 + w - 2; x += 6) { px.set(x, y, FPAPER[2]); px.set(x + 1, y, FPAPER[2]); px.set(x + 1, y - 1, FPAPER[0]); }
+    // a few flecks of gold leaf
+    const rnd = G.rng(seed);
+    for (let i = 0; i < 4; i++) px.set(x0 + 2 + rnd.int(w - 4), top + 2 + rnd.int(12), GOLD[1]);
+    // the lacquered frame
+    px.hline(x0, x0 + w - 1, top, LACQ[1]);
+    px.vline(x0, top, bot, LACQ[1]);
+    px.vline(x0 + w - 1, top, bot, LACQ[3]);
+    px.hline(x0, x0 + w - 1, bot, LACQ[3]);
+    px.set(x0, top, LACQ[0]);
+    // shading: the right part of each leaf a touch darker
+    for (let y = top + 1; y < bot; y++) px.set(x0 + w - 2, y, mix(px.get(x0 + w - 2, y), FPAPER[4], 0.25));
+    // the round finger pull (hikite): gilt rim, dark lacquer inside
+    const py = 15;
+    px.set(pullX, py - 1, GOLD[1]); px.set(pullX + 1, py - 1, GOLD[2]);
+    px.set(pullX - 1, py, GOLD[1]); px.set(pullX + 2, py, GOLD[3]);
+    px.set(pullX - 1, py + 1, GOLD[2]); px.set(pullX + 2, py + 1, GOLD[3]);
+    px.set(pullX, py + 2, GOLD[3]); px.set(pullX + 1, py + 2, GOLD[4]);
+    px.set(pullX, py, LACQ[3]); px.set(pullX + 1, py, LACQ[4]); px.set(pullX, py + 1, LACQ[4]); px.set(pullX + 1, py + 1, LACQ[2]);
+  }
+  // dark closet interior between x0..x1: the middle shelf (nakadana) and the floor board
+  function closetInside(px, x0, x1) {
+    for (let y = 3; y <= 30; y++)
+      for (let x = x0; x <= x1; x++) px.set(x, y, (x + y) % 5 === 0 ? C('#17131a') : VOID2);
+    // inner side wall nearest the light catches a little
+    px.vline(x0, 3, 30, C('#2a2226')); px.vline(x0 + 1, 4, 30, C('#1e191d'));
+    px.hline(x0, x1, 3, C('#0c0a0e')); px.hline(x0, x1, 4, C('#0c0a0e'));
+    // shelf: top face and the lit front edge
+    px.hline(x0, x1, 14, C('#2c2420'));
+    px.hline(x0, x1, 15, HINOKI[3]); px.hline(x0, x1, 16, HINOKI[4]);
+    px.set(x0, 15, HINOKI[2]);
+    px.hline(x0, x1, 17, C('#060508'));
+    // closet floor board
+    px.hline(x0, x1, 29, C('#2c2420')); px.hline(x0, x1, 30, HINOKI[4]);
+  }
+  def('fusuma', () => {
+    const px = new G.PX(32, 32);
+    fusumaFrame(px);
+    fusumaLeaf(px, 2, 15, 12, 3);
+    // the right leaf runs in the front track: its edge throws a thin shadow on the left one
+    px.vline(16, 4, 29, mix(FPAPER[3], LACQ[3], 0.4));
+    fusumaLeaf(px, 16, 14, 18, 8);
+    // old water stain on the left leaf, a little tear in the right one
+    for (const [x, y] of [[4, 26], [5, 27], [6, 27], [7, 27], [3, 27], [4, 28]]) px.set(x, y, mix(px.get(x, y), C('#8a7046'), 0.35));
+    px.set(24, 25, VOID2); px.set(25, 25, C('#3a3230')); px.set(24, 26, C('#3a3230')); px.set(23, 25, FPAPER[0]); px.set(25, 24, FPAPER[0]);
+    px.outline();
+    return fr(px, 16, 32);
+  });
+  def('fusuma_open', () => {
+    const px = new G.PX(32, 32);
+    fusumaFrame(px);
+    closetInside(px, 2, 15);
+    // both leaves stacked on the right: the back one peeks out 1px past the front one
+    fusumaLeaf(px, 15, 15, 17, 3);
+    fusumaLeaf(px, 16, 14, 18, 8);
+    px.vline(15, 4, 29, LACQ[2]);
+    // the leaf edge casts a shadow into the closet
+    px.vline(14, 5, 29, C('#060508'));
+    px.outline();
+    return fr(px, 16, 32);
+  });
+  // a folded futon seen edge-on: rounded fold, highlight on top, shade underneath
+  function foldedFuton(px, x, y, w, h, r, pattern) {
+    px.rect(x + 1, y, w - 2, h, r[2]);
+    px.vline(x, y + 1, y + h - 2, r[2]); px.vline(x + w - 1, y + 1, y + h - 2, r[3]);
+    px.hline(x + 1, x + w - 2, y, r[0]);
+    if (h > 2) px.hline(x + 1, x + w - 3, y + 1, r[1]);
+    px.hline(x + 1, x + w - 2, y + h - 1, r[3]);
+    px.set(x, y + h - 2, r[3]);
+    if (pattern) for (let i = x + 2; i < x + w - 2; i += 3) px.set(i, y + 1 + (h > 3 ? 1 : 0), pattern);
+  }
+  def('oshiire', () => {
+    const px = new G.PX(32, 32);
+    fusumaFrame(px);
+    closetInside(px, 16, 29);
+    // the leaves pushed to the left
+    fusumaLeaf(px, 2, 15, 12, 5);
+    fusumaLeaf(px, 3, 14, 13, 9);
+    px.vline(2, 4, 29, LACQ[2]);
+    // stacked bedding on the upper shelf
+    const BLUE = R('#a8b8d0', '#7d92b4', '#5c7096', '#435474', '#2e3a54');
+    const ROSE = R('#d8a8a0', '#c08680', '#9c6662', '#784a4a', '#523236');
+    const WHITE = R('#f2eee4', '#dcd6c8', '#beb8aa', '#9a9488', '#76716a');
+    const OLIVE = R('#b8b080', '#9a9262', '#7c744a', '#5e5838', '#423e28');
+    foldedFuton(px, 17, 11, 12, 3, WHITE);
+    foldedFuton(px, 18, 8, 11, 3, BLUE, BLUE[4]);
+    foldedFuton(px, 17, 6, 12, 2, ROSE);
+    foldedFuton(px, 18, 3, 10, 3, OLIVE, OLIVE[0]);
+    px.hline(17, 29, 14, C('#120e10'));
+    // lower level: a cardboard box and the corner of a rolled-up mat
+    const BOX = R('#b89868', '#a07e52', '#84663e', '#66502e', '#463620');
+    px.rect(18, 22, 9, 7, BOX[2]); px.hline(18, 26, 22, BOX[0]); px.hline(18, 26, 23, BOX[1]);
+    px.vline(26, 23, 28, BOX[3]); px.vline(18, 23, 28, BOX[1]);
+    px.hline(20, 24, 25, BOX[3]); px.set(22, 23, BOX[3]);
+    px.rect(27, 25, 3, 4, C('#5a5440')); px.set(27, 25, C('#7a7458')); px.vline(29, 25, 28, C('#3a3628'));
+    px.hline(16, 29, 29, C('#2a2220'));
+    px.outline();
+    return fr(px, 16, 32);
+  });
+
+  // ---- calendar: DECEMBER 1958, the 9th circled (1x1 wall) ----
+  def('calendar', () => {
+    const px = new G.PX(16, 23);
+    const P = PAPER;
+    px.rect(0, 1, 16, 22, P[1]);
+    vgrad(px, 0, 1, 16, 22, [P[0], P[1], P[1], P[2]]);
+    px.vline(15, 1, 22, P[2]);
+    // binding strip with the nail
+    px.hline(0, 15, 0, C('#6a2e2a')); px.hline(0, 15, 1, C('#4a1e1c'));
+    px.set(7, 0, CHROME[0]); px.set(8, 0, CHROME[2]);
+    // the torn stubs of the months already gone
+    px.set(2, 2, P[3]); px.set(5, 2, P[3]); px.set(11, 2, P[3]);
+    // DEC / 1958
+    text(px, 'DEC', 1, 3, TEXT);
+    px.hline(13, 14, 5, C('#a04848'));
+    textN(px, '1958', 1, 9, C('#5a525a'));
+    px.hline(1, 14, 15, P[3]);
+    // the days: Dec 1958 began on a Monday; Sundays in red
+    for (let d = 1; d <= 31; d++) {
+      const i = d, col = i % 7, row = Math.floor(i / 7);
+      px.set(1 + col * 2, 16 + row * 2 - (row > 0 ? 0 : 0), col === 0 ? C('#a85a56') : C('#4e4852'));
+    }
+    // the 9th (Tuesday, second row) circled in red crayon
+    const RED = C('#c8282c'), RED2 = C('#962022');
+    const cx = 1 + 2 * 2, cy = 18;
+    for (const [x, y, c] of [[cx - 1, cy - 2, RED], [cx, cy - 2, RED], [cx + 1, cy - 2, RED], [cx + 2, cy - 1, RED], [cx + 2, cy, RED2], [cx + 2, cy + 1, RED2],
+      [cx + 1, cy + 2, RED2], [cx, cy + 2, RED], [cx - 1, cy + 2, RED], [cx - 2, cy + 1, RED], [cx - 2, cy, RED], [cx - 2, cy - 1, RED], [cx + 3, cy - 2, RED]]) px.set(x, y, c);
+    px.set(cx, cy, RED2);
+    // the bottom corner curls up
+    px.set(15, 22, 0); px.set(14, 22, P[3]); px.set(15, 21, P[3]);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 23);
+  });
+
+  // ---- printed name card in a clear plastic holder (1x1 wall) ----
+  def('name_card', () => {
+    const px = new G.PX(8, 11);
+    px.rect(0, 0, 8, 11, STEEL[2]);
+    px.hline(0, 7, 0, STEEL[0]); px.vline(0, 1, 10, STEEL[1]); px.vline(7, 1, 10, STEEL[3]); px.hline(1, 7, 10, STEEL[4]);
+    px.rect(1, 1, 6, 9, PAPER[0]);
+    px.vline(6, 1, 9, PAPER[2]); px.hline(1, 6, 9, PAPER[2]);
+    // two vertical lines of print and a small family crest
+    px.vline(4, 2, 7, C('#4a4650')); px.vline(2, 3, 6, C('#7a7680'));
+    px.set(4, 4, PAPER[1]);
+    // glare across the plastic
+    px.set(1, 6, C('#ffffff')); px.set(2, 5, C('#ffffff')); px.set(3, 4, mix(PAPER[0], C('#ffffff'), 0.6));
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 20);
+  });
+
+  // ---- old white enamel nameplate: 青木 (Aoki), chipped (1x1 wall) ----
+  def('nameplate_enamel', () => {
+    const px = new G.PX(8, 18);
+    const E = R('#f4f4ee', '#e2e2da', '#c8c8c0', '#a2a29c', '#7a7a76');
+    px.rect(0, 0, 8, 18, E[1]);
+    vgrad(px, 0, 0, 8, 18, [E[0], E[1], E[1], E[2]]);
+    px.vline(0, 0, 17, E[0]); px.vline(7, 0, 17, E[3]); px.hline(0, 7, 17, E[3]);
+    // rounded corners
+    px.set(0, 0, 0); px.set(7, 0, 0); px.set(0, 17, 0); px.set(7, 17, 0);
+    // inner border line
+    const B = C('#2c3448');
+    px.hline(2, 5, 1, B); px.hline(2, 5, 16, B); px.vline(1, 2, 15, B); px.vline(6, 2, 15, B);
+    // 青
+    const K = C('#18161c');
+    px.stamp(['..#..', '#####', '..#..', '.###.', '.#.#.', '.###.', '.#.#.', '.#.##'], { '#': K }, 1, 2);
+    // 木
+    px.stamp(['..#..', '#####', '.###.', '#.#.#', '..#..'], { '#': K }, 1, 11);
+    // screws
+    px.set(3, 0, STEEL[3]); px.set(4, 0, STEEL[3]);
+    // chips: dark iron showing through, rust around
+    for (const [x, y] of [[7, 5], [6, 5], [7, 6], [0, 13], [0, 14], [1, 14], [5, 17], [6, 17]]) px.set(x, y, C('#26242a'));
+    px.set(6, 6, RUST[2]); px.set(1, 13, RUST[2]); px.set(1, 15, RUST[3]); px.set(4, 17, RUST[2]);
+    px.set(0, 15, RUST[1]); px.set(0, 16, RUST[2]);
+    // crazing in the enamel
+    px.set(2, 10, E[2]); px.set(3, 10, E[2]); px.set(5, 10, E[3]);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 21);
+  });
+
+  // ---- plug-in nightlight on the dado: the save point (1x1 wall, frames 4) ----
+  def('nightlight', () => frames(4, (k) => {
+    const px = new G.PX(16, 15);
+    const lvl = [0, 1, 2, 1][k];
+    // the socket plate (cream bakelite) with a screw
+    px.rect(5, 4, 6, 9, CREAM[1]);
+    px.hline(5, 10, 4, CREAM[0]); px.vline(5, 5, 12, CREAM[0]); px.vline(10, 5, 12, CREAM[3]); px.hline(6, 10, 12, CREAM[3]);
+    px.set(7, 11, CREAM[3]); px.set(8, 11, CREAM[4]);
+    // the shell-shaped shade, glowing from the bulb at its base
+    const shell = ['..####..', '.######.', '########', '########', '.######.'];
+    px.stamp(shell, { '#': GLOW[3] }, 4, 3);
+    // ribs of the shell
+    for (const [x0, y0, x1, y1] of [[5, 7, 6, 4], [7, 7, 7, 3], [9, 7, 9, 3], [10, 7, 10, 4]]) px.line(x0, y0, x1, y1, GLOW[2]);
+    // brightness rises toward the bulb at the bottom middle
+    const core = [[7, 6], [8, 6], [7, 5], [8, 5], [6, 6], [9, 6]];
+    core.forEach(([x, y], i) => { if (i < 2 + lvl * 2) px.set(x, y, i < 2 ? GLOW[0] : GLOW[1]); });
+    px.set(7, 4, lvl > 0 ? GLOW[1] : GLOW[2]); px.set(8, 4, GLOW[2]);
+    px.set(4, 5, GLOW[4]); px.set(4, 6, GLOW[4]); px.set(11, 5, GLOW[4]); px.set(11, 6, GLOW[4]); px.set(5, 3, GLOW[3]);
+    // white plastic base plugged into the socket
+    px.hline(5, 10, 8, C('#e8e2d2')); px.hline(6, 9, 9, C('#c8c0ae')); px.set(10, 8, C('#b4ac9a'));
+    px.outline(C('#5a2a12'));
+    // warm light spilling on the wainscot around it, breathing
+    const a = 0.2 + lvl * 0.08, r = 6.5 + lvl * 0.6;
+    halo(px, 8, 6.5, r + 1.2, r * 0.95, '#ffb45a', a);
+    spill(px, 8, 9, 4, 4, C('#ffd08a'), 0.18 + lvl * 0.06);
+    return wallF(px, 32);
+  }), 4);
+
+  // ---- fluorescent tube fixture at the top of the wall (1x1 wall, frames 3; frame 2 dark) ----
+  def('fluoro', () => frames(3, (k) => {
+    const px = new G.PX(16, 10);
+    // painted steel channel
+    px.rect(1, 0, 14, 3, C('#d8d8d0'));
+    px.hline(1, 14, 0, C('#f0f0e8')); px.hline(1, 14, 2, C('#9a9a94')); px.vline(14, 0, 2, C('#a8a8a0'));
+    // sockets
+    px.rect(0, 2, 2, 3, C('#8a8a86')); px.rect(14, 2, 2, 3, C('#7a7a76')); px.set(0, 2, C('#b0b0aa'));
+    // the tube
+    const on = k !== 2, dim = k === 1;
+    const core = on ? (dim ? C('#d6eaee') : C('#f6feff')) : C('#5e686c');
+    const low = on ? (dim ? C('#a8c6cc') : C('#c6e6ee')) : C('#465054');
+    px.hline(2, 13, 3, core); px.hline(2, 13, 4, low);
+    // blackened ends of an old tube; when it drops out the filaments glow orange
+    px.set(2, 3, on ? C('#8a989c') : C('#a0583a')); px.set(13, 3, on ? C('#7a868a') : C('#8a4a30'));
+    px.set(2, 4, C('#4a5458')); px.set(13, 4, C('#4a5458'));
+    if (dim) { px.set(9, 3, C('#bcd4da')); px.set(10, 3, C('#bcd4da')); }
+    px.outline();
+    if (on) {
+      for (let x = 2; x <= 13; x++) px.set(x, 3, core);
+      halo(px, 8, 5, 10, 5.5, dim ? '#c8ecf4' : '#e0f8ff', dim ? 0.2 : 0.32, (i, j) => j >= 5);
+    }
+    return wallF(px, 10);
+  }), 6);
+
+  // ---- corridor-side window: frosted glass behind a steel grille (1x1 wall) ----
+  function frostedWindow(shadow) {
+    const px = new G.PX(16, 15);
+    // aluminium frame
+    px.rect(0, 0, 16, 14, ALU[2]);
+    px.hline(0, 15, 0, ALU[0]); px.vline(0, 1, 13, ALU[1]); px.vline(15, 1, 13, ALU[3]); px.hline(1, 15, 13, ALU[3]);
+    // frosted glass, lit dimly from inside (a light left on somewhere deep in the flat)
+    const G0 = C('#aeb2a6'), G1 = C('#969a90'), G2 = C('#7c8078'), G3 = C('#62665f');
+    for (let y = 1; y <= 11; y++)
+      for (let x = 1; x <= 14; x++) {
+        const d = Math.hypot((x - 9) / 7, (y - 7) / 6);
+        const n = G.hash(x, y, 33) * 0.35 + d * 0.8;
+        px.set(x, y, n < 0.5 ? G0 : n < 0.8 ? G1 : n < 1.05 ? G2 : G3);
+      }
+    // warm tint where the light is
+    spill(px, 9, 7, 5, 4, C('#d8c49a'), 0.35);
+    if (shadow) {
+      // a tall figure standing right behind the glass: cap brim, head, broad shoulders
+      const S0 = C('#25222a'), S1 = C('#3a363c'), S2 = C('#555158');
+      const body = (x, y) => {
+        const hx = 8.5;
+        if (y <= 1) return Math.abs(x + 0.5 - hx) < 3.2;           // cap crown (cut off by the frame)
+        if (y === 2) return Math.abs(x + 0.5 - hx) < 4.6;          // brim
+        if (y <= 6) return Math.abs(x + 0.5 - hx) < 2.9;           // head
+        if (y === 7) return Math.abs(x + 0.5 - hx) < 2.2;          // neck
+        return Math.abs(x + 0.5 - hx) < 4 + (y - 8) * 1.4;         // shoulders
+      };
+      for (let y = 1; y <= 11; y++)
+        for (let x = 1; x <= 14; x++) {
+          const inside = body(x, y);
+          const edge = !inside && (body(x - 1, y) || body(x + 1, y) || body(x, y - 1) || body(x, y + 1));
+          if (inside) {
+            const e2 = !(body(x - 1, y) && body(x + 1, y) && body(x, y - 1) && body(x, y + 1));
+            px.set(x, y, e2 ? S1 : S0);
+          } else if (edge && G.bayer(x, y) < 0.6) px.set(x, y, mix(px.get(x, y), S2, 0.6));
+        }
+    }
+    // steel grille in front: vertical bars with their shadows on the glass
+    const BAR = R('#9ea4a8', '#80868c', '#646a70', '#4a4f55', '#34383d');
+    for (const bx of [3, 6, 9, 12]) {
+      px.vline(bx, 1, 11, BAR[1]); px.set(bx, 1, BAR[0]);
+      px.vline(bx + 1, 2, 11, mix(px.get(bx + 1, 6), BAR[4], 0.35));
+    }
+    px.hline(1, 14, 1, BAR[2]); px.hline(1, 14, 11, BAR[2]); px.hline(2, 14, 12, BAR[4]);
+    for (const bx of [3, 6, 9, 12]) { px.set(bx, 1, BAR[0]); px.set(bx, 11, BAR[1]); }
+    // the sash meeting stile and a crescent lock
+    px.vline(8, 2, 10, mix(ALU[3], G2, 0.3));
+    // concrete sill with a rust drip
+    px.rect(0, 13, 16, 2, CONC[1]); px.hline(0, 15, 13, CONC[0]); px.hline(1, 15, 14, CONC[3]);
+    dribble(px, 13, 14, 1, RUST);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 19);
+  }
+  def('window_frosted', () => frostedWindow(false));
+  def('window_frosted_shadow', () => frostedWindow(true));
+
+  // ---- window at night, rain running down the glass (1x1 wall, frames 3) ----
+  def('window_rain', () => frames(3, (k) => {
+    const px = new G.PX(16, 17);
+    const FR = R('#d8d0b8', '#bcb49c', '#9e967e', '#7e7862', '#5c5848'); // cream painted steel sash
+    px.rect(0, 0, 16, 15, FR[2]);
+    px.hline(0, 15, 0, FR[0]); px.vline(0, 1, 14, FR[1]); px.vline(15, 1, 14, FR[3]); px.hline(1, 15, 14, FR[4]);
+    const inG = (x, y) => y >= 2 && y <= 12 && ((x >= 2 && x <= 6) || (x >= 9 && x <= 13));
+    // night: dark sky, a far block of flats with two lit windows, wet glow low down
+    for (let y = 2; y <= 12; y++) for (let x = 2; x <= 13; x++) {
+      if (!inG(x, y)) continue;
+      let c = G.bayer(x, y) < (y - 2) / 12 ? C('#141c2a') : C('#0c111d');
+      if (y >= 7 && (x < 5 || (x > 9 && x < 13))) c = C('#080a10');
+      px.set(x, y, c);
+    }
+    px.set(3, 8, C('#8a7448')); px.set(11, 9, C('#6e5c3a')); px.set(10, 8, C('#5a4c34'));
+    // rain outside: slanted streaks, moving 4px a frame over a 12px period (seamless loop)
+    const streaks = [[3, 0], [5, 5], [10, 2], [12, 8], [13, 3], [2, 9], [6, 10], [11, 6]];
+    for (const [sx, sy] of streaks)
+      for (let j = 0; j < 2; j++) {
+        const t = (sy + k * 4 + j) % 12, y = 1 + t, x = sx - (t >> 2) + 1;
+        if (inG(x, y)) px.set(x, y, mix(px.get(x, y), C('#7c90a8'), j ? 0.55 : 0.3));
+      }
+    // drops sliding down the inside of the pane: a wet trail and a bright head
+    for (const [dx, d0] of [[4, 2], [11, 7], [13, 0]]) {
+      for (let y = 2; y <= 12; y++) if (inG(dx, y) && (y + dx) % 3) px.set(dx, y, mix(px.get(dx, y), C('#30405a'), 0.5));
+      const hy = 2 + ((d0 + k * 4) % 12);
+      if (inG(dx, hy)) { px.set(dx, hy, C('#a8bcd4')); if (inG(dx, hy - 1)) px.set(dx, hy - 1, C('#46586e')); }
+    }
+    // static beads on the glass
+    for (const [x, y] of [[2, 4], [6, 6], [9, 3], [12, 11], [5, 11]]) if (inG(x, y)) px.set(x, y, C('#5a6e88'));
+    // meeting stiles and the crescent lock
+    px.vline(7, 1, 13, FR[1]); px.vline(8, 1, 13, FR[3]);
+    px.set(7, 7, GOLD[2]); px.set(8, 7, GOLD[3]);
+    // sill
+    px.rect(0, 15, 16, 2, FR[1]); px.hline(0, 15, 15, FR[0]); px.hline(1, 15, 16, FR[3]);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 20);
+  }), 6);
+
+  // ---- wide window with a pale pink-gold sunrise (2x1 wall) ----
+  def('window_sunrise', () => {
+    const px = new G.PX(32, 19);
+    const AL = R('#eceae4', '#d2d0ca', '#b4b2ac', '#94928c', '#706e6a');
+    px.rect(0, 0, 32, 17, AL[2]);
+    px.hline(0, 31, 0, AL[0]); px.vline(0, 1, 16, AL[1]); px.vline(31, 1, 16, AL[3]); px.hline(1, 31, 16, AL[3]);
+    const inG = (x, y) => y >= 2 && y <= 14 && x >= 2 && x <= 29 && x !== 15 && x !== 16;
+    const sky = [C('#9aa6c8'), C('#b4b0cc'), C('#d4b4c0'), C('#eab8b0'), C('#f4cca2'), C('#fae0aa')];
+    for (let y = 2; y <= 14; y++) for (let x = 2; x <= 29; x++) {
+      if (!inG(x, y)) continue;
+      const t = ((y - 2) / 11) * (sky.length - 1);
+      const i0 = Math.min(sky.length - 1, Math.floor(t)), f = t - i0;
+      px.set(x, y, f > G.bayer(x, y) && i0 < sky.length - 1 ? sky[i0 + 1] : sky[i0]);
+    }
+    // the sun just clearing the rooftops, a soft bloom around it
+    spill(px, 21, 12.5, 7, 4.5, C('#fff2c8'), 0.75);
+    px.disc(21, 12.5, 2.2, C('#fffbe8'));
+    // thin clouds lit pink and gold from below
+    for (const [x0, x1, y, c] of [[4, 11, 5, '#e8c4c8'], [6, 9, 4, '#c8b4c8'], [18, 27, 7, '#f6d4b8'], [22, 25, 6, '#e8bcbc'], [9, 13, 8, '#f0c8b4']])
+      for (let x = x0; x <= x1; x++) if (inG(x, y)) px.set(x, y, C(c));
+    // distant roofs and trees, cool violet-grey against the light
+    const ridge = [12, 12, 11, 11, 11, 12, 13, 13, 12, 10, 10, 10, 12, 12, 13, 13, 13, 12, 13, 14, 14, 14, 14, 13, 12, 11, 11, 12];
+    for (let x = 2; x <= 29; x++) for (let y = ridge[x - 2]; y <= 14; y++) if (inG(x, y)) px.set(x, y, y === ridge[x - 2] ? C('#8a7c94') : C('#6e6480'));
+    // a power pole and a line
+    px.vline(7, 7, 14, C('#5e5470')); px.hline(6, 8, 8, C('#5e5470'));
+    for (let x = 8; x <= 29; x++) { const y = 8 + Math.round(Math.sin((x - 8) / 21 * Math.PI) * 1.5); if (inG(x, y)) px.set(x, y, mix(px.get(x, y), C('#6e6480'), 0.6)); }
+    // mullion
+    px.vline(15, 1, 15, AL[1]); px.vline(16, 1, 15, AL[3]);
+    // sheer white curtains drawn back to both sides
+    const CU = R('#fbf8f2', '#ece8e0', '#d6d0c6', '#b8b2a8', '#948e86');
+    for (let y = 0; y <= 17; y++) {
+      const wl = y < 8 ? 3 : y < 11 ? 2 : 3 + ((y - 11) >> 1);
+      for (let x = 0; x < wl; x++) px.set(x, y, x === 0 ? CU[1] : (x + (y >> 2)) % 2 ? CU[0] : CU[2]);
+      for (let x = 0; x < wl; x++) px.set(31 - x, y, x === 0 ? CU[3] : (x + (y >> 2)) % 2 ? CU[1] : CU[2]);
+    }
+    px.hline(0, 2, 9, CU[3]); px.hline(29, 31, 9, CU[4]);
+    // sill catching the warm light
+    px.rect(0, 17, 32, 2, AL[1]); px.hline(0, 31, 17, C('#fff4dc')); px.hline(1, 31, 18, AL[3]);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 22);
+  });
+
+  // ---- small bathroom mirror cabinet (1x1 wall) ----
+  function mirrorCab(px, x, y) {
+    const F = R('#eeeee8', '#d4d4cc', '#b8b8b0', '#96968e', '#74746c');
+    px.rect(x, y, 12, 12, F[2]);
+    px.hline(x, x + 11, y, F[0]); px.vline(x, y + 1, y + 11, F[1]); px.vline(x + 11, y + 1, y + 11, F[3]); px.hline(x + 1, x + 11, y + 11, F[4]);
+    // glass reflecting the dim room: lighter at the top, a cool sheen and two glints
+    vgrad(px, x + 1, y + 1, 10, 9, [C('#a2b2bc'), C('#7e8e9a'), C('#5a6874'), C('#3e4852')]);
+    px.line(x + 2, y + 6, x + 6, y + 2, C('#c8d6de')); px.line(x + 3, y + 8, x + 8, y + 3, mix(C('#c8d6de'), C('#7e8e9a'), 0.5));
+    px.set(x + 9, y + 2, C('#dce6ec'));
+    // glass shelf with a tooth mug
+    px.hline(x, x + 11, y + 12, C('#b8c8cc')); px.hline(x + 1, x + 11, y + 13, C('#8a9aa0'));
+    px.rect(x + 7, y + 9, 3, 3, C('#7aa0c8')); px.set(x + 7, y + 9, C('#a8c4e0')); px.set(x + 9, y + 11, C('#5a7aa0'));
+    px.set(x + 7, y + 8, C('#e8e0d0')); px.set(x + 9, y + 7, C('#c87870')); px.set(x + 8, y + 8, C('#c87870'));
+  }
+  def('mirror_small', () => {
+    const px = new G.PX(12, 14);
+    mirrorCab(px, 0, 0);
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 19);
+  });
+
+  // ---- clocks ----
+  // a pendulum swing in 6 steps (ease at the ends), loops seamlessly
+  const SWING = [-2, -1, 1, 2, 1, -1];
+  function clockFace(px, cx, cy, r, rim) {
+    px.disc(cx, cy, r + 1, rim[2]);
+    G.shadeDisc(px, cx, cy, r + 1, rim[2], rim[0], rim[3]);
+    px.disc(cx, cy, r - 0.2, C('#eee4c6'));
+    // face shaded under the rim at the top-left
+    for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) {
+      const d = Math.hypot(i + 0.5 - (cx - Math.floor(cx)), j + 0.5 - (cy - Math.floor(cy)));
+      if (d > r - 1.4 && d < r - 0.2 && (i + j) < 0) px.tint(Math.floor(cx) + i, Math.floor(cy) + j, C('#cfc3a2'));
+    }
+  }
+  def('wall_clock', () => frames(6, (k) => {
+    const px = new G.PX(14, 23);
+    const W = DWOOD;
+    // pendulum case with a glass door
+    px.rect(2, 11, 10, 11, W[2]);
+    px.vline(2, 11, 21, W[1]); px.vline(11, 11, 21, W[3]); px.hline(2, 11, 21, W[4]); px.hline(3, 10, 22, W[3]);
+    px.rect(4, 13, 6, 7, C('#1c1416'));
+    px.hline(4, 9, 13, C('#100b0d'));
+    // pendulum: brass rod from the pivot and a disc bob
+    const s = SWING[k];
+    px.line(7, 13, 7 + s, 17, GOLD[3]);
+    px.set(6 + s, 18, GOLD[1]); px.set(7 + s, 18, GOLD[1]); px.set(6 + s, 19, GOLD[2]); px.set(7 + s, 19, GOLD[3]);
+    px.set(6 + s, 18, GOLD[0]);
+    // glass glint
+    px.set(5, 14, C('#5a5458')); px.set(4, 15, C('#3e383c'));
+    // round dial housing on top
+    clockFace(px, 7, 6.5, 5, W);
+    // hour dots and the hands at ten to midnight
+    const INKC = C('#1e1a1c');
+    px.set(6, 2, INKC); px.set(7, 2, INKC); px.set(11, 6, INKC); px.set(2, 6, INKC); px.set(6, 10, INKC);
+    px.line(6, 6, 6, 3, INKC); px.line(6, 6, 3, 5, INKC); px.set(6, 6, C('#8a2a24'));
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 23);
+  }), 6);
+
+  def('cuckoo_clock', () => frames(6, (k) => {
+    const px = new G.PX(16, 30);
+    const W = DWOOD, L = WOOD;
+    // carved leaves and a little bird on the crest
+    px.stamp(['.....b.....', '..lL.bb.Ll.', '.lLLl..lLLl', 'lLl.....lLl'], { l: L[2], L: L[1], b: L[0] }, 2, 0);
+    // pointed chalet roof
+    for (let i = 0; i < 6; i++) { px.hline(7 - i, 8 + i, 3 + i, W[1]); px.set(7 - i, 3 + i, W[0]); px.set(8 + i, 3 + i, W[3]); }
+    px.hline(1, 14, 8, W[4]);
+    for (let i = 1; i < 5; i++) px.set(8 + i, 3 + i, W[2]);
+    // house body
+    px.rect(3, 9, 10, 9, W[2]); px.vline(3, 9, 17, W[1]); px.vline(12, 9, 17, W[3]); px.hline(3, 12, 17, W[4]);
+    // the bird door (closed) and the dial
+    px.rect(7, 9, 2, 2, W[4]); px.set(7, 9, W[3]);
+    clockFace(px, 8, 13.5, 2, L);
+    px.set(8, 12, C('#1e1a1c')); px.set(8, 13, C('#1e1a1c')); px.set(9, 13, C('#1e1a1c'));
+    // carved leaves on the sides of the body
+    px.set(2, 12, L[2]); px.set(1, 13, L[1]); px.set(2, 14, L[3]); px.set(13, 12, L[2]); px.set(14, 13, L[2]); px.set(13, 14, L[3]);
+    // pendulum: a carved wooden leaf on a thin rod
+    const s = SWING[k];
+    px.line(8, 18, 8 + s, 22, W[3]);
+    px.stamp(['.L.', 'LLl', 'Lll', '.l.'], { L: L[1], l: L[3] }, 7 + s, 22);
+    // chains and pine-cone weights at different heights
+    for (const [cx, wy] of [[5, 24], [11, 26]]) {
+      for (let y = 18; y < wy; y++) px.set(cx, y, y % 2 ? CHROME[2] : CHROME[3]);
+      px.stamp(['.c.', 'ccC', 'cCC', 'CCC', '.C.'], { c: RUST[2], C: RUST[3] }, cx - 1, wy);
+      px.set(cx - 1, wy + 1, RUST[1]);
+    }
+    px.outline();
+    drop(px, 1, 1, SHADOW2);
+    return wallF(px, 31);
+  }), 6);
 })(window.G);
