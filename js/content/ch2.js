@@ -129,9 +129,9 @@
   // ======================================================================
   G.MAPS.stair3 = {
     name: 'Stairwell 3F', wall: 'concrete', floor: { '.': 'concrete' },
-    dark: 0.7, ambience: 'wind',
-    lights: [{ x: 2, y: 2, r: 36, col: '#40ff80', glow: 0.3 }],
-    entries: { from_4f: [7, 4, 'down'], from_c3: [2, 3, 'down'], from_2f: [3, 6, 'right'] },
+    dark: 0.6, ambience: 'wind',
+    lights: [{ x: 5, y: 2, r: 40, col: '#40ff80', glow: 0.3 }],
+    entries: { from_4f: [2, 5, 'down'], from_c3: [5, 3, 'down'], from_2f: [8, 5, 'down'] },
     tiles: [
       '##########',
       'WWWWWWWWWW',
@@ -143,14 +143,23 @@
       '##########',
     ],
     objects: [
-      { id: 'door_c3', x: 2, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c3', entry: 'from_stair3', dir: 'down' } },
-      { id: 'up', x: 7, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair4', entry: 'from_3f', dir: 'down', walk: true } },
-      { id: 'barricade', x: 0, y: 5, w: 3, h: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'),
-        text: ['@ Every chair in the building is piled here. Tables. A mattress. The way down is buried.', '@haru Someone moved them all... quietly. When?'] },
-      { id: 'chairs', x: 5, y: 3, w: 2, sprite: 'chair', cond: (E) => !!E.flag('stairsOpen'), text: ['@ The chairs stand in a neat row against the wall.', '@haru Somebody put all the chairs back.'] },
-      { id: 'down', x: 1, y: 6, w: 2, sprite: 'stairs_down', touch: true, solid: false, stairs: true, cond: (E) => !!E.flag('stairsOpen'), door: { to: 'stair2', entry: 'from_3f', dir: 'down', walk: true } },
+      { id: 'door_c3', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c3', entry: 'from_stair3', dir: 'down' } },
+      { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_3f' },
+      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_4f' },
+      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair4', entry: 'from_3f', dir: 'down', walk: true } },
+      { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_2f' },
+      { id: 'barricade', x: 7, y: 3, w: 3, h: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'),
+        text: ['@ Every chair in the building is piled here, on top of the stairs down. Tables. A mattress.', "@haru The way down is buried. Someone moved them all... quietly. When?", '@haru (The door to the third floor is right there, under the EXIT light.)'] },
+      { id: 'down', x: 7, y: 3, w: 2, h: 2, sprite: 'stairs_down2', z: 'floor', touch: true, solid: false, stairs: true, cond: (E) => !!E.flag('stairsOpen'), door: { to: 'stair2', entry: 'from_3f', dir: 'down', walk: true } },
+      { id: 'chairs', x: 9, y: 6, sprite: 'chair', cond: (E) => !!E.flag('stairsOpen'), text: ['@ The chairs stand in a neat row against the wall.', '@haru Somebody put all the chairs back.'] },
     ],
-    enter: arrive3F,
+    enter: function* (E) {
+      yield* arrive3F(E);
+      if (!E.flag('stairsOpen') && !E.flag('c2_sawBarricade') && !E.chasing()) {
+        E.set('c2_sawBarricade');
+        yield* E.say('@haru:shock The stairs down... someone piled furniture all over them!', '@haru:determined The third floor door, then. The one with the EXIT light.');
+      }
+    },
   };
 
   G.MAPS.c3 = {

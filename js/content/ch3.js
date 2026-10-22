@@ -114,9 +114,9 @@
 
   G.MAPS.stair2 = {
     name: 'Stairwell 2F', wall: 'concrete', floor: { '.': 'concrete' },
-    dark: 0.7, ambience: 'wind',
-    lights: [{ x: 6, y: 2, r: 36, col: '#40ff80', glow: 0.3 }],
-    entries: { from_c2: [6, 3, 'down'], from_3f: [7, 4, 'down'], from_1f: [3, 6, 'right'] },
+    dark: 0.6, ambience: 'wind',
+    lights: [{ x: 5, y: 2, r: 40, col: '#40ff80', glow: 0.3 }],
+    entries: { from_c2: [5, 3, 'down'], from_3f: [2, 5, 'down'], from_1f: [8, 5, 'down'] },
     tiles: [
       '##########',
       'WWWWWWWWWW',
@@ -128,15 +128,16 @@
       '##########',
     ],
     objects: [
-      { id: 'door_c2', x: 6, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c2', entry: 'from_stair2', dir: 'down' } },
-      { id: 'up_block', x: 7, y: 3, w: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'), text: ['@ Chair legs. Table legs. The whole pile from upstairs, jammed into the stairs.'] },
-      { id: 'up', x: 7, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, cond: (E) => !!E.flag('stairsOpen'), door: { to: 'stair3', entry: 'from_2f', dir: 'down', walk: true } },
-      { id: 'under', x: 1, y: 3, sprite: 'boxes_stack', hide: true, hidePrompt: '@ A dark space under the stairs, behind some boxes. Squeeze in and hide?' },
-      { id: 'down', x: 1, y: 6, w: 2, sprite: 'stairs_down', stairs: true,
-        on: function* (E) {
-          if (!E.flag('stairsOpen')) { E.sfx('locked'); yield* E.say('@ At the bottom of the stairs, the door to the ground floor is locked. From the other side.', '@haru There\'s a lobby down there. I can almost smell the rain.'); return; }
-          yield* E.goto('stair1', 'from_2f', null, 'down', { sfx: 'stairs' });
-        } },
+      { id: 'door_c2', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c2', entry: 'from_stair2', dir: 'down' } },
+      { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_2f' },
+      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_3f' },
+      { id: 'up_block', x: 1, y: 3, w: 2, sprite: 'barricade', cond: (E) => !E.flag('stairsOpen'), text: ['@ Chair legs. Table legs. The whole pile from upstairs, jammed into the stairs going up.'] },
+      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, cond: (E) => !!E.flag('stairsOpen'), door: { to: 'stair3', entry: 'from_2f', dir: 'down', walk: true } },
+      { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_1f' },
+      { id: 'down', x: 7, y: 3, w: 2, h: 2, sprite: 'stairs_down2', z: 'floor', touch: true, solid: false, stairs: true,
+        lock: (E) => !!E.flag('stairsOpen'), lockText: ['@ At the bottom of the stairs, the door to the ground floor is locked. From the other side.', "@haru There's a lobby down there. I can almost smell the rain."],
+        door: { to: 'stair1', entry: 'from_2f', dir: 'down', walk: true } },
+      { id: 'under', x: 9, y: 6, sprite: 'boxes_stack', hide: true, hidePrompt: '@ A dark space behind some boxes in the corner. Squeeze in and hide?' },
     ],
   };
 

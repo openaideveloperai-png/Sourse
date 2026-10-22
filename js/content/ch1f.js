@@ -327,9 +327,9 @@
   // ======================================================================
   G.MAPS.stair1 = {
     name: 'Stairwell 1F', wall: 'concrete', floor: { '.': 'concrete' },
-    dark: 0.7, ambience: 'wind',
-    lights: [{ x: 5, y: 2, r: 36, col: '#40ff80', glow: 0.3 }],
-    entries: { from_lobby: [5, 3, 'down'], from_2f: [7, 4, 'down'], from_b1: [2, 3, 'down'] },
+    dark: 0.6, ambience: 'wind',
+    lights: [{ x: 5, y: 2, r: 40, col: '#40ff80', glow: 0.3 }, { x: 8, y: 3, r: 30, col: '#ffb060', glow: 0.2 }],
+    entries: { from_lobby: [5, 3, 'down'], from_2f: [2, 5, 'down'], from_b1: [8, 4, 'down'] },
     tiles: [
       '##########',
       'WWWWWWWWWW',
@@ -341,12 +341,15 @@
       '##########',
     ],
     objects: [
-      { id: 'b1door', x: 2, y: 1, h: 2, z: 'wall', sprite: 'door_basement', lock: 'basement_key', latch: true,
+      { id: 'door_lobby', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'lobby', entry: 'from_stair1', dir: 'down' } },
+      { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_1f' },
+      { id: 'sign_up', x: 1, y: 2, w: 2, z: 'wall', sprite: 'sign_up_2f' },
+      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair2', entry: 'from_1f', dir: 'down', walk: true } },
+      { id: 'sign_b1', x: 6, y: 1, w: 2, z: 'wall', sprite: 'sign_down_b1' },
+      { id: 'b1door', x: 8, y: 1, h: 2, z: 'wall', sprite: 'door_basement', lock: 'basement_key', latch: true,
         lockText: ['@ A heavy rusted door. B1 - STAFF ONLY. Padlocked.', '@haru Tama is down there. I know it.'], unlockText: '@ The B1 key turns in the padlock.',
         door: { to: 'b1_hall', entry: 'from_1f', dir: 'down' } },
-      { id: 'door_lobby', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'lobby', entry: 'from_stair1', dir: 'down' } },
-      { id: 'up', x: 7, y: 3, w: 2, sprite: 'stairs_up', touch: true, solid: false, stairs: true, door: { to: 'stair2', entry: 'from_1f', dir: 'down', walk: true } },
-      { id: 'sign', x: 3, y: 2, z: 'wall', sprite: 'paper', text: ['@ A sign: B1 - BOILER - STORAGE - CARETAKER. Staff only.'] },
+      { id: 'sign', x: 9, y: 2, z: 'wall', sprite: 'paper', text: ['@ A sign: B1 - BOILER - STORAGE - CARETAKER. Staff only.'] },
     ],
   };
   G.MAPS.bikes = {

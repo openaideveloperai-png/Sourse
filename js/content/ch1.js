@@ -469,9 +469,9 @@
 
   G.MAPS.stair4 = {
     name: 'Stairwell 4F', wall: 'concrete', floor: { '.': 'concrete' },
-    dark: 0.7, ambience: 'wind',
-    lights: [{ x: 6, y: 2, r: 36, col: '#40ff80', glow: 0.3 }],
-    entries: { from_c4: [6, 3, 'down'], from_3f: [7, 5, 'up'] },
+    dark: 0.6, ambience: 'wind',
+    lights: [{ x: 5, y: 2, r: 40, col: '#40ff80', glow: 0.3 }, { x: 8, y: 4, r: 34, col: '#e8f0ff', glow: 0.15 }],
+    entries: { from_c4: [5, 3, 'down'], from_3f: [8, 5, 'down'] },
     tiles: [
       '##########',
       'WWWWWWWWWW',
@@ -483,12 +483,19 @@
       '##########',
     ],
     objects: [
-      { id: 'door_c4', x: 6, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c4', entry: 'from_stair4', dir: 'down' } },
-      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', text: ['@ The stairs up to the roof. The roof door is chained shut.', '@haru Good. I don\'t want to go up. I want to go DOWN.'] },
-      { id: 'cupboard', x: 4, y: 3, sprite: 'wardrobe', hide: true, hidePrompt: '@ A cleaning cupboard. Mops and buckets... and just enough room. Hide inside?', hideSprite: 'wardrobe_open' },
-      { id: 'mop', x: 9, y: 3, sprite: 'mop_bucket', text: ['@ A mop and a bucket. The water in it is still warm.'] },
-      { id: 'down', x: 7, y: 6, w: 2, sprite: 'stairs_down', touch: true, solid: false, stairs: true, door: { to: 'stair3', entry: 'from_4f', dir: 'down', walk: true } },
+      { id: 'door_c4', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c4', entry: 'from_stair4', dir: 'down' } },
+      { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_4f' },
+      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', text: ['@ The stairs up to the roof. The roof door is chained shut.', "@haru Good. I don't want to go up. I want to go DOWN."] },
+      { id: 'sign_up', x: 1, y: 2, z: 'wall', sprite: 'sign_up_roof', w: 2 },
+      { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_3f' },
+      { id: 'down', x: 7, y: 3, w: 2, h: 2, sprite: 'stairs_down2', z: 'floor', touch: true, solid: false, stairs: true, door: { to: 'stair3', entry: 'from_4f', dir: 'down', walk: true } },
+      { id: 'cupboard', x: 1, y: 6, sprite: 'wardrobe', hide: true, hidePrompt: '@ A cleaning cupboard. Mops and buckets... and just enough room. Hide inside?', hideSprite: 'wardrobe_open' },
+      { id: 'mop', x: 9, y: 6, sprite: 'mop_bucket', text: ['@ A mop and a bucket. The water in it is still warm.'] },
     ],
+    first: function* (E) {
+      if (E.chasing()) return;
+      yield* E.say('@haru The stairs down are right there. 3F.');
+    },
   };
 
   // ---------------- 401: Mrs. Ota ----------------
