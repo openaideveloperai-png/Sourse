@@ -205,7 +205,51 @@
       return ex;
     },
     titleDraw(c, t) { drawTitle(c, t); },
+    // after the true ending, the title menu gets an Endings gallery with all six
+    titleItems() { return seenEndings().includes('welcome_home') ? [{ label: 'Endings', act: () => G.fadeTo(() => new Gallery(), 0.6) }] : []; },
     scenes: {},
+  };
+  const ENDING_ORDER = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home'];
+  function seenEndings() {
+    let seen = [];
+    try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { seen = []; }
+    return Array.isArray(seen) ? seen : [];
+  }
+
+  // ---------------- endings gallery: watch any ending again ----------------
+  function Gallery() { this.t = 0; this.i = 0; this.ids = ENDING_ORDER.filter((k) => G.ENDINGS[k]); }
+  G.Gallery = Gallery;
+  Gallery.prototype.update = function (dt, inp) {
+    this.t += dt;
+    if (G.UI.active) { G.UI.update(dt, inp); return; }
+    G.Audio.music('title');
+    const n = this.ids.length + 1;
+    if (inp.up) { this.i = (this.i + n - 1) % n; G.Audio.sfx('cursor'); }
+    if (inp.down) { this.i = (this.i + 1) % n; G.Audio.sfx('cursor'); }
+    if (inp.back || (inp.ok && this.i === this.ids.length)) { G.Audio.sfx('cancel'); G.fadeTo(() => new G.Title(), 0.6); return; }
+    if (inp.ok) { G.Audio.sfx('select'); G.UI.openEnding(this.ids[this.i], () => {}, { replay: true }); }
+  };
+  Gallery.prototype.draw = function (c) {
+    const W = G.W, H = G.H;
+    if (G.UI.active) { G.UI.draw(c); return; }
+    drawTitle(c, this.t);
+    c.fillStyle = 'rgba(4,2,8,0.86)'; c.fillRect(0, 0, W, H);
+    // hide the title text behind the heading
+    c.fillStyle = 'rgba(4,2,8,0.97)'; c.fillRect(0, 0, W, 66); c.fillRect(W - 140, H - 40, 140, 40);
+    G.text(c, 'ENDINGS', W / 2, 22, { align: 'center', scale: 2, color: '#d8d0dc', shadow: '#2a0a18' });
+    const seen = seenEndings();
+    this.ids.forEach((k, j) => {
+      const E = G.ENDINGS[k], y = 58 + j * 22, sel = j === this.i;
+      c.fillStyle = seen.includes(k) ? E.color || '#ffffff' : '#3a3444';
+      c.fillRect(W / 2 - 120, y + 1, 7, 7);
+      G.text(c, G.clean(E.title), W / 2 - 106, y, { color: sel ? '#ffffff' : '#a89aa8', shadow: '#000' });
+      G.text(c, G.clean((E.subtitle || '').replace(/^Ending \d+ of \d+ - /, '')), W / 2 + 120, y, { align: 'right', color: sel ? E.color || '#ffffff' : '#5a5466', shadow: '#000' });
+      if (sel) G.text(c, '\u2192', W / 2 - 134 - (Math.floor(this.t * 4) % 2), y, { color: '#c890ff', shadow: '#000' });
+    });
+    const by = 58 + this.ids.length * 22 + 6, bsel = this.i === this.ids.length;
+    G.text(c, 'Back', W / 2 - 106, by, { color: bsel ? '#ffffff' : '#8a8298', shadow: '#000' });
+    if (bsel) G.text(c, '\u2192', W / 2 - 134 - (Math.floor(this.t * 4) % 2), by, { color: '#c890ff', shadow: '#000' });
+    G.text(c, 'Z watch   X back', W / 2, H - 12, { align: 'center', color: '#4a4458', shadow: '#000' });
   };
 
   // ---------------- title screen: Hinata Heights in the rain ----------------

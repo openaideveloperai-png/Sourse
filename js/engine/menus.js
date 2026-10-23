@@ -508,9 +508,11 @@
   };
 
   // ---------------- endings ----------------
-  UI.openEnding = function (id, done) {
+  // opts.replay: watched again from the endings gallery (not recorded, no time/deaths, done() returns)
+  UI.openEnding = function (id, done, opts) {
     const E = (G.ENDINGS && G.ENDINGS[id]) || { title: 'THE END', lines: [] };
-    try {
+    const replay = !!(opts && opts.replay);
+    if (!replay) try {
       const seen = JSON.parse(localStorage.getItem('horror_endings') || '[]');
       if (!seen.includes(id)) seen.push(id);
       localStorage.setItem('horror_endings', JSON.stringify(seen));
@@ -522,10 +524,12 @@
       t: 0, i: 0, lt: 0,
       update(dt, inp) {
         this.t += dt; this.lt += dt;
+        if (replay && inp.back) { UI.stack = []; done(); return; }
         if (this.i < lines.length) {
           if (inp.ok && this.lt > 0.6) { this.i++; this.lt = 0; }
         } else if (inp.ok && this.lt > 1.5) {
           UI.stack = []; done();
+          if (replay) return;
           // retry endings (a quick bad end): back to the last checkpoint instead of the title
           if (E.retry && (G.checkpointData || G.loadGame())) G.retry();
           else G.fadeTo(() => new G.Title(), 0.8);
@@ -543,13 +547,13 @@
         }
         G.text(ctx, G.clean(E.title), W / 2, 66, { align: 'center', scale: 2, color: E.color || '#e8e0f0', shadow: '#2a0a18' });
         if (E.subtitle) G.text(ctx, G.clean(E.subtitle), W / 2, 94, { align: 'center', color: '#a89aa8', shadow: '#000' });
-        G.text(ctx, 'Time ' + G.fmtTime(G.S.time) + '     Deaths ' + G.S.deaths, W / 2, 130, { align: 'center', color: '#8a8298', shadow: '#000' });
+        if (!replay) G.text(ctx, 'Time ' + G.fmtTime(G.S.time) + '     Deaths ' + G.S.deaths, W / 2, 130, { align: 'center', color: '#8a8298', shadow: '#000' });
         let seen = [];
         try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { /* ignore */ }
         const total = Object.keys(G.ENDINGS || {}).length;
-        if (total) G.text(ctx, 'Endings found: ' + seen.length + ' / ' + total, W / 2, 146, { align: 'center', color: '#8a8298', shadow: '#000' });
+        if (total && !replay) G.text(ctx, 'Endings found: ' + seen.length + ' / ' + total, W / 2, 146, { align: 'center', color: '#8a8298', shadow: '#000' });
         if (E.hint) G.text(ctx, G.clean(E.hint), W / 2, 176, { align: 'center', color: '#6a5a7a', shadow: '#000' });
-        if (this.lt > 1.5 && Math.floor(this.t * 2) % 2) G.text(ctx, E.retry ? 'Press Z to try again' : 'Press Z', W / 2, H - 20, { align: 'center', color: '#5a5466' });
+        if (this.lt > 1.5 && Math.floor(this.t * 2) % 2) G.text(ctx, E.retry && !replay ? 'Press Z to try again' : 'Press Z', W / 2, H - 20, { align: 'center', color: '#5a5466' });
       },
     });
   };

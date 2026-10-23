@@ -134,6 +134,7 @@
     const items = [];
     if (save) items.push({ label: 'Continue', act: () => G.continueGame() });
     items.push({ label: 'New Game', act: () => { if (save && !this.confirm) { this.confirm = true; return; } G.fadeTo(() => G.newGame(), 0.8); } });
+    if (G.GAME && G.GAME.titleItems) for (const it of G.GAME.titleItems()) items.push(it);
     items.push({ label: () => 'Sound: ' + (G.Audio.muted ? 'OFF' : 'ON'), act: () => G.Audio.toggleMute() });
     items.push({ label: 'Fullscreen', act: () => G.toggleFull() });
     this.menu = new G.Menu(items);
