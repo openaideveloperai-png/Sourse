@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nightlight Maker</title>
+<meta name="description" content="Nightlight Maker: make pixel-art horror adventures like NOBODY HOME. Paint rooms, place objects, write events, playtest and export.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Silkscreen&display=swap">
+<link rel="stylesheet" href="maker.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand" aria-label="Nightlight Maker"><span class="lamp" aria-hidden="true"></span><b>NIGHTLIGHT</b><span>MAKER</span></div>
+  <label class="ptitle"><span class="sr">Game title</span><input id="projTitle" type="text" spellcheck="false"></label>
+  <nav class="filebar" aria-label="File">
+    <button type="button" data-act="new">New</button>
+    <button type="button" data-act="open">Open</button>
+    <button type="button" data-act="save">Save file</button>
+    <button type="button" data-act="export">Export game</button>
+    <button type="button" data-act="sample">Sample game</button>
+    <button type="button" data-act="help">Help</button>
+  </nav>
+  <div class="spacer"></div>
+  <button type="button" class="icon" data-act="undo" title="Undo (Ctrl+Z)">Undo</button>
+  <button type="button" class="icon" data-act="redo" title="Redo (Ctrl+Y)">Redo</button>
+  <button type="button" id="probBtn" data-act="problems">No problems</button>
+  <button type="button" class="play" data-act="play" title="Play from the title screen (F5)">Play</button>
+  <button type="button" class="play ghost" data-act="playhere" title="Play from the middle of this room (F6)">Play this room</button>
+</header>
+<div id="body">
+  <aside id="left">
+    <div class="tabs" id="leftTabs" role="tablist">
+      <button type="button" role="tab" data-view="map" class="on">Rooms</button>
+      <button type="button" role="tab" data-view="db">Database</button>
+      <button type="button" role="tab" data-view="game">Game</button>
+    </div>
+    <div id="leftBody"></div>
+  </aside>
+  <main id="center">
+    <section id="mapView">
+      <div id="toolbar"></div>
+      <div id="stage" tabindex="0"><canvas id="mapCanvas"></canvas></div>
+      <div id="status"><span id="stTile"></span><span id="stHint"></span></div>
+    </section>
+    <section id="dbView" hidden></section>
+    <section id="gameView" hidden></section>
+  </main>
+  <aside id="right"><div id="inspector"></div></aside>
+</div>
+<div id="modalRoot"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<div id="ctxMenu" hidden></div>
+<input type="file" id="fileOpen" accept=".json,application/json" hidden>
+<input type="file" id="fileImg" accept="image/png,image/gif,image/webp,image/jpeg" hidden>
+<div id="datalists" hidden></div>
+
+<script src="js/engine_files.js"></script>
+<script>NL.ART_FILES.forEach(function (f) { document.write('<script src="../' + f + '"><\/script>'); });</script>
+<script src="js/runtime.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/ed_core.js"></script>
+<script src="js/ed_fields.js"></script>
+<script src="js/ed_map.js"></script>
+<script src="js/ed_inspect.js"></script>
+<script src="js/ed_events.js"></script>
+<script src="js/ed_db.js"></script>
+<script src="js/ed_io.js"></script>
+<script src="js/ed_main.js"></script>
+</body>
+</html>

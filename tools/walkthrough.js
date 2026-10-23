@@ -26,7 +26,10 @@ const { chromium } = require('playwright');
 const path = require('path');
 (async () => {
   const args = process.argv.slice(2);
-  const route = args.find((a) => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--shots') || 'main';
+  const route = args.find((a) => !a.startsWith('--') && !['--shots', '--page', '--route-file'].includes(args[args.indexOf(a) - 1])) || 'main';
+  const page = args.includes('--page') ? args[args.indexOf('--page') + 1] : 'index.html';
+  // --route-file steps.json: a route kept outside the page (for exported games)
+  const routeFile = args.includes('--route-file') ? JSON.parse(require('fs').readFileSync(args[args.indexOf('--route-file') + 1], 'utf8')) : null;
   const shotDir = args.includes('--shots') ? args[args.indexOf('--shots') + 1] : null;
   const verbose = args.includes('--verbose');
   const b = await chromium.launch();
@@ -34,10 +37,11 @@ const path = require('path');
   const errs = [];
   p.on('pageerror', (e) => errs.push(e.message));
   p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.goto('file://' + path.resolve(__dirname, '../index.html') + '?dev=1');
+  await p.goto('file://' + path.resolve(__dirname, '..', page) + '?dev=1');
+  await p.waitForFunction(() => window.__G && window.__G.dev, null, { timeout: 15000 });
   await p.waitForTimeout(300);
   await p.evaluate(() => { window.__G.TEST = true; window.__G.dev.paused = true; });
-  const steps = await p.evaluate((r) => { const R = (window.__G.WALKTHROUGH || {})[r]; return typeof R === 'function' ? R() : R || null; }, route);
+  const steps = routeFile || await p.evaluate((r) => { const R = (window.__G.WALKTHROUGH || {})[r] || (window.NL && window.NL.ROUTES && window.NL.ROUTES[r]); return typeof R === 'function' ? R() : R || null; }, route);
   if (!steps) { console.log('no route', route); process.exit(1); }
   if (steps[0] && steps[0].start) {
     const r = await p.evaluate((cfg) => { try { window.__G.dev.start(cfg); return 'ok'; } catch (e) { return String(e); } }, steps[0].start);

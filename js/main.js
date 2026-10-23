@@ -231,7 +231,7 @@
     ex.start(q.get('map'), isNaN(+qx) ? qx : +qx, +(q.get('y') || 4), q.get('dir') || 'down');
     scene = ex;
   } else if (G.DEV && q.get('scene')) scene = G.GAME.scenes[q.get('scene')]();
-  else scene = new G.Title();
+  else scene = (G.GAME && G.GAME.firstScene && G.GAME.firstScene()) || new G.Title();
   requestAnimationFrame(tick);
   // test helpers: stand next to an object facing it, then interact
   G.dev = {

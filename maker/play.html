@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Playtest</title>
+<link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game" width="416" height="240" aria-label="Game screen"></canvas>
+  <div id="touch" aria-hidden="true">
+    <div id="dpad"><span class="u"></span><span class="d"></span><span class="l"></span><span class="r"></span></div>
+    <div id="btns"><button id="btnB" type="button">X</button><button id="btnA" type="button">Z</button></div>
+  </div>
+</div>
+<script src="js/engine_files.js"></script>
+<script>NL.ENGINE_FILES.forEach(function (f) { document.write('<script src="../' + f + '"><\/script>'); });</script>
+<script src="js/runtime.js"></script>
+<script src="js/schema.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>

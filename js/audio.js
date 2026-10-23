@@ -313,6 +313,7 @@
     g.gain.setTargetAtTime(cfg[1] * 3, A.ctx.currentTime, 1.0);
     amb = { name: name, g: g, nodes: nodes };
   };
+  A.sfxNames = () => Object.keys(S);
   A.sfx = function (name, a, b) {
     if (!A.ready || A.muted) return;
     try { S[name] && S[name](a, b); } catch (e) { /* ignore audio errors */ }
@@ -361,6 +362,7 @@
     return steps;
   }
   let cur = null, timer = null;
+  A.musicNames = () => Object.keys(SONGS);
   A.music = function (name) {
     if (!A.ready) { A._pendingSong = name; return; }
     if (cur && cur.name === name) return;

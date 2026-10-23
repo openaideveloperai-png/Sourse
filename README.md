@@ -38,6 +38,13 @@ On phones and tablets an on-screen d-pad and buttons appear.
   have chains. If you hide, make sure he didn't hear you do it.
 - Some things in this building are worth doing even if they open no door.
 
+## Nightlight Maker
+
+This branch also holds **Nightlight Maker** (`maker/`), an RPG-Maker-style editor for making
+games like this one on the same engine: paint rooms, place objects, write events, playtest,
+export one HTML file. See [maker/README.md](maker/README.md). Open `maker/index.html`, or build
+the one-file version with `node tools/build_maker.js`.
+
 ## For developers
 
 - `docs/design.md`: the design (research synthesis and the full build spec).

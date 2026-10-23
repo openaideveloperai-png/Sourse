@@ -511,9 +511,9 @@
   UI.openEnding = function (id, done) {
     const E = (G.ENDINGS && G.ENDINGS[id]) || { title: 'THE END', lines: [] };
     try {
-      const seen = JSON.parse(localStorage.getItem('horror_endings') || '[]');
+      const seen = JSON.parse(localStorage.getItem(G.ENDINGS_KEY || 'horror_endings') || '[]');
       if (!seen.includes(id)) seen.push(id);
-      localStorage.setItem('horror_endings', JSON.stringify(seen));
+      localStorage.setItem(G.ENDINGS_KEY || 'horror_endings', JSON.stringify(seen));
     } catch (e) { /* storage blocked */ }
     G.Audio.music(E.music || 'ending');
     const lines = E.lines.map(G.clean);
@@ -545,7 +545,7 @@
         if (E.subtitle) G.text(ctx, G.clean(E.subtitle), W / 2, 94, { align: 'center', color: '#a89aa8', shadow: '#000' });
         G.text(ctx, 'Time ' + G.fmtTime(G.S.time) + '     Deaths ' + G.S.deaths, W / 2, 130, { align: 'center', color: '#8a8298', shadow: '#000' });
         let seen = [];
-        try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { /* ignore */ }
+        try { seen = JSON.parse(localStorage.getItem(G.ENDINGS_KEY || 'horror_endings') || '[]'); } catch (e) { /* ignore */ }
         const total = Object.keys(G.ENDINGS || {}).length;
         if (total) G.text(ctx, 'Endings found: ' + seen.length + ' / ' + total, W / 2, 146, { align: 'center', color: '#8a8298', shadow: '#000' });
         if (E.hint) G.text(ctx, G.clean(E.hint), W / 2, 176, { align: 'center', color: '#6a5a7a', shadow: '#000' });
@@ -555,7 +555,7 @@
   };
 
   // ---------------- save / load ----------------
-  const SAVE = 'horror_save_v1';
+  const SAVE_KEY = () => G.SAVE_KEY || 'horror_save_v1';
   // refused (returns false) while something hunts the player: a save must never skip a chase
   G.saveGame = function () {
     if (G.Chase.active) return false;
@@ -563,12 +563,12 @@
     G.S.x = Math.floor(ex.p.x / G.TS);
     G.S.y = Math.floor((ex.p.y - 2) / G.TS);
     G.S.dir = ex.p.dir;
-    try { localStorage.setItem(SAVE, JSON.stringify({ S: G.S, at: G.S.time })); } catch (e) { /* storage blocked */ }
+    try { localStorage.setItem(SAVE_KEY(), JSON.stringify({ S: G.S, at: G.S.time })); } catch (e) { /* storage blocked */ }
     G.savedInMemory = G.snapshot();
     return true;
   };
   G.loadGame = function () {
-    try { const d = JSON.parse(localStorage.getItem(SAVE) || 'null'); if (d) return d.S; } catch (e) { /* ignore */ }
+    try { const d = JSON.parse(localStorage.getItem(SAVE_KEY()) || 'null'); if (d) return d.S; } catch (e) { /* ignore */ }
     return G.savedInMemory || null;
   };
   G.continueGame = function () {
