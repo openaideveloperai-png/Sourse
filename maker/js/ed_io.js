@@ -32,12 +32,18 @@
     // the one-file maker builds the game page itself; the repo version loads play.html
     if (window.NL_SOURCES) { fr.srcdoc = ED.buildGameHtml(window.NL_SOURCES, P, opts); fr.addEventListener('load', () => setTimeout(() => fr.focus(), 50)); }
     else fr.src = 'play.html';
+    let started = false;
     const onMsg = (e) => {
+      if (e.source === fr.contentWindow && e.data && e.data.type === 'nl-started') started = true;
       if (e.source !== fr.contentWindow || !e.data || e.data.type !== 'nl-ready') return;
       fr.contentWindow.postMessage({ type: 'nl-play', project: JSON.parse(JSON.stringify(P)), opts: opts || {} }, '*');
       setTimeout(() => fr.focus(), 50);
     };
     window.addEventListener('message', onMsg);
+    setTimeout(() => {
+      if (started || !fr.isConnected) return;
+      fr.replaceWith(h('div', { style: { padding: '24px', maxWidth: '60ch' } }, h('p', 'The playtest could not start in this page. Some embedded viewers do not allow a game inside the editor.'), h('p.hint', 'Use Export game and open the file, or open the maker from the repository (maker/index.html).')));
+    }, 6000);
     ED.modal({
       title: 'Playtest: ' + (P.title || 'Untitled') + (opts && opts.from ? '  (from ' + opts.from.map + ')' : ''), cls: 'playwrap', sticky: true, body: fr,
       header: [h('span.hint', 'Arrows move, Z examine, X menu, Shift run. Click the game if keys do nothing.')],

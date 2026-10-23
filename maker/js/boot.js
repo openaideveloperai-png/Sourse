@@ -11,6 +11,7 @@
     started = true;
     G.MAKER.loadAssets(project).then(() => {
       G.MAKER.apply(project, opts || {});
+      if (window.parent !== window) window.parent.postMessage({ type: 'nl-started' }, '*');
       document.title = project.title || 'Nightlight game';
       if (window.NL_MAIN) window.NL_MAIN();
       else { const s = document.createElement('script'); s.src = '../js/main.js'; document.body.appendChild(s); }
