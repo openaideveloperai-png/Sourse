@@ -483,7 +483,7 @@
     name: 'Stairwell 4F', wall: 'concrete', floor: { '.': 'concrete' },
     dark: 0.6, ambience: 'wind',
     lights: [{ x: 5, y: 2, r: 40, col: '#40ff80', glow: 0.3 }, { x: 8, y: 4, r: 34, col: '#e8f0ff', glow: 0.15 }],
-    entries: { from_c4: [5, 3, 'down'], from_3f: [8, 5, 'down'] },
+    entries: { from_c4: [5, 3, 'down'], from_3f: [8, 5, 'down'], from_roof: [2, 5, 'down'] },
     tiles: [
       '##########',
       'WWWWWWWWWW',
@@ -497,7 +497,22 @@
     objects: [
       { id: 'door_c4', x: 5, y: 1, h: 2, z: 'wall', sprite: 'door_stairs', latch: true, door: { to: 'c4', entry: 'from_stair4', dir: 'down' } },
       { id: 'floorsign', x: 3, y: 1, w: 2, z: 'wall', sprite: 'sign_floor_4f' },
-      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up', text: ['@ The stairs up to the roof. The roof door is chained shut.', "@haru Good. I don't want to go up. I want to go DOWN."] },
+      { id: 'up', x: 1, y: 3, w: 2, sprite: 'stairs_up',
+        on: function* (E) {
+          // the dream ending: only once Tama is free (the wire cutters cut her loose, and cut this chain)
+          if (!E.flag('tama_saved') || !E.has('wire_cutters')) { yield* E.say('@ The stairs up to the roof. The roof door is chained shut.', "@haru Good. I don't want to go up. I want to go DOWN."); return; }
+          if (E.chasing()) { yield* E.say('@haru:scared Not now!'); return; }
+          if (!E.flag('roof_open')) {
+            yield* E.say('@ The stairs up to the roof. The door at the top is chained shut.');
+            if (E.flag('follower') === 'tama') { E.sfx('chirp'); yield* E.say('@ Tama trots up the steps, sits by the door and looks back at Haru.'); }
+            const ok = yield* E.yesno('@ Cut the chain with the wire cutters?');
+            if (!ok) return;
+            E.sfx('click');
+            E.set('roof_open');
+            yield* E.say('@ Snip. The chain slides off the handle and the door swings open. Wind.');
+          }
+          yield* E.goto('roof', 'from_stairs', null, 'up', { sfx: 'stairs' });
+        } },
       { id: 'sign_up', x: 1, y: 1, z: 'wall', sprite: 'sign_up_roof', w: 2 },
       { id: 'sign_down', x: 7, y: 2, w: 2, z: 'wall', sprite: 'sign_down_3f' },
       { id: 'down', x: 7, y: 3, w: 2, h: 2, sprite: 'stairs_down2', z: 'floor', touch: true, solid: false, stairs: true, door: { to: 'stair3', entry: 'from_4f', dir: 'down', walk: true } },

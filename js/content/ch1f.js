@@ -224,6 +224,7 @@
       E.set('fin_ringing');
       E.sfx('ring');
       yield* E.say('@ Before Haru can push the doors, the red phone starts to ring.');
+      if (E.flag('follower') === 'tama') { E.sfx('chirp'); E.bubbleNow('follower', '?', 1.4); yield* E.say('@ Tama does not look at the phone. She looks at the stairwell door. Up. All the way up.'); }
       E.goal('The phone is ringing.', 'fin_phone');
       return;
     }

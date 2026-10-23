@@ -40,32 +40,32 @@
   // ---------------- endings ----------------
   G.ENDINGS = Object.assign(G.ENDINGS || {}, {
     okaeri: {
-      title: 'OKAERI', subtitle: 'Ending 1 of 6 - bad', color: '#c84050', music: 'badend', retry: true,
+      title: 'OKAERI', subtitle: 'Ending 1 of 7 - bad', color: '#c84050', music: 'badend', retry: true,
       lines: ['Haru opened the door.', 'It wasn\'t Mom.', 'Something very tall bent down until it filled the doorway.', 'It had a ring of keys. It had no face.', '"There you are," it said. "It\'s late."'],
       hint: 'Mom has her own keys.',
     },
     nobody_home: {
-      title: 'NOBODY HOME', subtitle: 'Ending 2 of 6 - bad', color: '#8090b0', music: 'badend',
+      title: 'NOBODY HOME', subtitle: 'Ending 2 of 7 - bad', color: '#8090b0', music: 'badend',
       lines: ['Haru let the phone ring.', 'He ran through the doors and into the rain,', 'until the building was gone and the road was empty.', 'They found him at dawn on the river road, in his slippers,', 'asking every car if they had seen his mother.', 'He was very polite about it.'],
       hint: 'Someone was trying to reach you.',
     },
     lights_out: {
-      title: 'LIGHTS OUT', subtitle: 'Ending 3 of 6 - normal', color: '#a0a0c0', music: 'sad',
+      title: 'LIGHTS OUT', subtitle: 'Ending 3 of 7 - normal', color: '#a0a0c0', music: 'sad',
       lines: ['The hand was warm. Haru let it lead him.', 'For a moment the corridor had handrails, and every door had a photograph.', 'Then it was 404 again: the futon, the rain, the stopped clock.', '"Good night, Mr. Aoki."', 'Mister? thought Haru. I\'m ten.', 'Tomorrow night, the knocking starts again.'],
       hint: 'Mom wrote you five letters. Someone is still waiting for you.',
     },
     good_night: {
-      title: 'GOOD NIGHT', subtitle: 'Ending 4 of 6 - good', color: '#a0c8e0', music: 'sad',
+      title: 'GOOD NIGHT', subtitle: 'Ending 4 of 7 - good', color: '#a0c8e0', music: 'sad',
       lines: ['The hand was warm. Haru let it lead him.', 'Down the corridor, Mrs. Ota was asleep with a smile. Somewhere a piano finished its song.', 'Back in 404 the futon was warm, and someone had left the hall light on.', '"Good night, Mr. Aoki."', '"Good night," said Haru. "Tell Mom I waited up."', 'Nobody knocked again that night.'],
       hint: 'Almost. Did you read everything Mom wrote? Did you leave anyone behind?',
     },
     stay: {
-      title: 'STAY IN YOUR ROOM', subtitle: 'Ending 5 of 6 - secret', color: '#d8b8e8', music: 'sad',
+      title: 'STAY IN YOUR ROOM', subtitle: 'Ending 5 of 7 - secret', color: '#d8b8e8', music: 'sad',
       lines: ['Haru got back into his futon and pulled the blanket over his head, like she said.', 'Stay in your room tonight. Whatever you hear.', 'He heard the rain. He heard keys, once, far away, and a door being checked.', 'Then it was morning. Someone knocked, and a voice he knew said, "Dad? It\'s me."', 'It was the shortest night in years.'],
       hint: 'Mom told you to stay in your room. Sometimes that is enough. But there is so much more to find out there.',
     },
     welcome_home: {
-      title: 'WELCOME HOME', subtitle: 'Ending 6 of 6 - true', color: '#f0c890', music: 'ending',
+      title: 'WELCOME HOME', subtitle: 'Ending 6 of 7 - true', color: '#f0c890', music: 'ending',
       lines: ['Morning came to Hinata Hills.', 'The cat slept on the blanket. The rain had stopped.', 'Someone had brought oranges, and a very small cake.', 'He was not cured. It was just a good morning.', 'For everyone who waits up at night.'],
     },
   });
@@ -205,11 +205,11 @@
       return ex;
     },
     titleDraw(c, t) { drawTitle(c, t); },
-    // after the true ending, the title menu gets an Endings gallery with all six
-    titleItems() { return seenEndings().includes('welcome_home') ? [{ label: 'Endings', act: () => G.fadeTo(() => new Gallery(), 0.6) }] : []; },
+    // after the true ending (or the dream ending), the title menu gets an Endings gallery
+    titleItems() { const s = seenEndings(); return s.includes('welcome_home') || s.includes('happy_birthday') ? [{ label: 'Endings', act: () => G.fadeTo(() => new Gallery(), 0.6) }] : []; },
     scenes: {},
   };
-  const ENDING_ORDER = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home'];
+  const ENDING_ORDER = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home', 'happy_birthday'];
   function seenEndings() {
     let seen = [];
     try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { seen = []; }
@@ -239,14 +239,14 @@
     G.text(c, 'ENDINGS', W / 2, 22, { align: 'center', scale: 2, color: '#d8d0dc', shadow: '#2a0a18' });
     const seen = seenEndings();
     this.ids.forEach((k, j) => {
-      const E = G.ENDINGS[k], y = 58 + j * 22, sel = j === this.i;
+      const E = G.ENDINGS[k], y = 52 + j * 19, sel = j === this.i;
       c.fillStyle = seen.includes(k) ? E.color || '#ffffff' : '#3a3444';
       c.fillRect(W / 2 - 120, y + 1, 7, 7);
       G.text(c, G.clean(E.title), W / 2 - 106, y, { color: sel ? '#ffffff' : '#a89aa8', shadow: '#000' });
       G.text(c, G.clean((E.subtitle || '').replace(/^Ending \d+ of \d+ - /, '')), W / 2 + 120, y, { align: 'right', color: sel ? E.color || '#ffffff' : '#5a5466', shadow: '#000' });
       if (sel) G.text(c, '\u2192', W / 2 - 134 - (Math.floor(this.t * 4) % 2), y, { color: '#c890ff', shadow: '#000' });
     });
-    const by = 58 + this.ids.length * 22 + 6, bsel = this.i === this.ids.length;
+    const by = 52 + this.ids.length * 19 + 6, bsel = this.i === this.ids.length;
     G.text(c, 'Back', W / 2 - 106, by, { color: bsel ? '#ffffff' : '#8a8298', shadow: '#000' });
     if (bsel) G.text(c, '\u2192', W / 2 - 134 - (Math.floor(this.t * 4) % 2), by, { color: '#c890ff', shadow: '#000' });
     G.text(c, 'Z watch   X back', W / 2, H - 12, { align: 'center', color: '#4a4458', shadow: '#000' });
@@ -336,14 +336,14 @@
     let seen = [];
     try { seen = JSON.parse(localStorage.getItem('horror_endings') || '[]'); } catch (e) { seen = []; }
     if (!Array.isArray(seen)) seen = [];
-    const ids = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home'];
+    const ids = ['okaeri', 'nobody_home', 'lights_out', 'good_night', 'stay', 'welcome_home', 'happy_birthday'];
     if (ids.some((k) => seen.includes(k))) {
       ids.forEach((k, i) => {
-        const x0 = W - 74 + i * 11, y0 = H - 30;
+        const x0 = W - 85 + i * 11, y0 = H - 30;
         c.fillStyle = seen.includes(k) ? (G.ENDINGS[k].color || '#fff') : '#2a2434';
         c.fillRect(x0, y0, 8, 8);
       });
-      G.text(c, 'Endings', W - 74, H - 41, { color: '#5a5466', shadow: '#000' });
+      G.text(c, 'Endings', W - 85, H - 41, { color: '#5a5466', shadow: '#000' });
     }
   }
 })(window.G);

@@ -453,7 +453,8 @@
       ctx.globalCompositeOperation = 'source-over';
     }
     G.FX.draw(ctx, ox, oy, 1);
-    if (def.rain) this.drawRain(ctx, ox, oy, def.rain);
+    const rain = this.mapVal('rain');
+    if (rain) this.drawRain(ctx, ox, oy, rain);
     const ov = this.mapVal('overlay');
     if (ov) { ctx.fillStyle = ov; ctx.fillRect(0, 0, W, H); }
     // map tint (E => ['#5a0008', 0.35] | null), then the event tint (E.tint)
