@@ -33,7 +33,7 @@
     c4_find: function (E) {
       if (!E.flag('c4_steamOff')) return [['@mom Downstairs? Oh, Haru. Stay in the light.'], ['@mom The staff room is past the boiler. That\'s where he keeps the keys. And your cat.'], ['@mom The steam is in the way? Somebody must have written down how the valves go.']];
       if (!E.has('front_key')) return [['@mom The staff room. The key board.'], ['@mom The one who keeps trying to leave... who could that be?'], ['@mom Read the rounds sheet, Haru. He changed the code to a room number.']];
-      return [['@mom Go back up, Haru. Quickly.']];
+      return [['@mom Go up to the lobby, Haru. The ground floor. Quickly.'], ['@mom The front doors in the lobby. Your key opens the chain.']];
     },
     c4_steam: [['@mom Steam? Someone must have written down how the valves go.'], ['@mom Hot water high, heating low, laundry in the middle. ...(far away) Is he all right? ...Yes, I\'m still here.'], ['@mom The pipes in the hall have painted bands. Which colour is which?']],
     c4_box: [['@mom The one who keeps trying to leave... who could that be?'], ['@mom Read the rounds sheet, Haru.'], ['@mom His room number, sweetheart. 404.']],
@@ -309,6 +309,7 @@
           E.sfx('unlock');
           yield* E.say('@haru:confused ...404? That\'s MY room.', "@haru:annoyed I don't try to leave. I'm just looking for Mom.");
           yield* E.give('front_key');
+          E.goal('Run up to the lobby (1F). Open the front doors.', 'fin_go');
           yield* chase4(E);
         } },
       { id: 'rounds', x: 9, y: 2, z: 'wall', sprite: 'rounds_sheet',

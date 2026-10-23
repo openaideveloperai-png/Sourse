@@ -36,7 +36,11 @@
     },
     c1f_tama: [['@mom Where\'s that cat of yours?'], ['@mom Downstairs, Haru. The B1 door is in the stairwell. But you need its key.'], ['@mom There\'s a key in the drain by the slide. Shota fishes things out of that drain.']],
     c1f_b1: [['@mom The B1 door is in the stairwell, Haru.'], ['@mom Use the key from the drain.']],
-    fin_phone: [['@mom Answer the phone, Haru.']],
+    fin_go: [['@mom Go up to the lobby, Haru. The ground floor. Quickly.'], ['@mom The front doors in the lobby. Your key opens the chain.']],
+    fin_phone: function (E) {
+      if (!E.flag('fin_unlocked')) return [['@mom The front doors, Haru. In the lobby. Your key opens the chain.']];
+      return [['@mom Answer the phone, Haru.']];
+    },
   });
 
   // ======================================================================
